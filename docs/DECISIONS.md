@@ -187,3 +187,67 @@ This document captures key decisions made during the development of the Event Ma
 - **Decision**: Implemented immediate UI updates followed by server confirmation for delete operations
 - **Reasoning**: This provides a more responsive user experience by showing the result of actions immediately, while still ensuring data consistency.
 - **Date**: 2024-05-05
+
+## Phase 5: Event Management
+
+### Data Model
+
+1. **Event Entity Design**
+   - Created a comprehensive event model with fields for title, description, category, date, time, price, capacity, and location.
+   - Added flags for event status (published/draft and canceled).
+   - Used nullable fields for optional information like end time and location.
+   - Linked events to categories via foreign key relationship for template-based creation.
+
+2. **Database Structure**
+   - Implemented Row Level Security (RLS) policies to ensure users can only access their own events.
+   - Added trigger for `updated_at` timestamp to track modifications.
+   - Created indexes on frequently queried fields like date and category_id for performance.
+
+### UI/UX Decisions
+
+1. **Event Form Design**
+   - Created a two-column form layout with logical grouping of related fields.
+   - Implemented date picker for better date selection experience.
+   - Added automatic field population from category defaults.
+   - Included validation for required fields.
+
+2. **Event Listing**
+   - Designed a table-based list with color-coded category indicators.
+   - Added status badges for quick identification of published/draft/canceled events.
+   - Implemented sorting by date and time for chronological display.
+
+3. **Event Details**
+   - Created a detailed event view with visual status indicators.
+   - Separated metadata (date, time, price) from descriptive content.
+   - Added edit and delete actions with appropriate confirmation dialogs.
+
+### Technical Decisions
+
+1. **Service Layer**
+   - Implemented comprehensive event service with methods for all CRUD operations.
+   - Added specialized methods for upcoming events and category-filtered queries.
+   - Used join queries to fetch category information alongside events.
+
+2. **Component Structure**
+   - Created reusable components for event forms to maintain consistency.
+   - Separated form logic from display logic using container components.
+   - Implemented cancellation as a soft-delete to preserve event history.
+
+3. **Dashboard Integration**
+   - Added upcoming events section to dashboard for quick access.
+   - Displayed key event statistics for better overview.
+   - Implemented quick-action buttons for common event operations.
+
+### Future Considerations
+
+1. **Event Recurrence**
+   - Future implementation will support recurring events with pattern definition.
+   - Will require additional database structure for recurrence rules.
+
+2. **Calendar View**
+   - Planning to add a calendar visualization for better temporal understanding.
+   - Will implement color coding by category.
+
+3. **Advanced Filtering**
+   - Will add more sophisticated filtering and search capabilities as event volume grows.
+   - Plan to implement saved searches for frequently used filters.
