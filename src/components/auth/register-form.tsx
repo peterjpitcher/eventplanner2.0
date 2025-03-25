@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-export function RegisterForm() {
+// Main content component
+function RegisterFormContent() {
   const { signUp } = useAuth();
   const router = useRouter();
   
@@ -129,5 +130,29 @@ export function RegisterForm() {
         </Link>
       </div>
     </div>
+  );
+}
+
+// Loading fallback
+function RegisterFormLoading() {
+  return (
+    <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
+      <div className="h-6 w-48 bg-gray-200 rounded-md animate-pulse mx-auto mb-6"></div>
+      <div className="space-y-4">
+        <div className="h-10 bg-gray-200 rounded-md animate-pulse"></div>
+        <div className="h-10 bg-gray-200 rounded-md animate-pulse"></div>
+        <div className="h-10 bg-gray-200 rounded-md animate-pulse"></div>
+        <div className="h-10 bg-gray-200 rounded-md animate-pulse mt-4"></div>
+      </div>
+    </div>
+  );
+}
+
+// Main exported component
+export function RegisterForm() {
+  return (
+    <Suspense fallback={<RegisterFormLoading />}>
+      <RegisterFormContent />
+    </Suspense>
   );
 } 

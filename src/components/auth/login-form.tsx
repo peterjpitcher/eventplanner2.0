@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-export function LoginForm() {
+// Extract the part that uses useSearchParams into a separate component
+function LoginFormContent() {
   const { signIn } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -98,5 +99,28 @@ export function LoginForm() {
         </Link>
       </div>
     </div>
+  );
+}
+
+// Create a loading fallback component
+function LoginFormLoading() {
+  return (
+    <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
+      <div className="h-6 w-48 bg-gray-200 rounded-md animate-pulse mx-auto mb-6"></div>
+      <div className="space-y-4">
+        <div className="h-10 bg-gray-200 rounded-md animate-pulse"></div>
+        <div className="h-10 bg-gray-200 rounded-md animate-pulse"></div>
+        <div className="h-10 bg-gray-200 rounded-md animate-pulse mt-4"></div>
+      </div>
+    </div>
+  );
+}
+
+// Main component that wraps the LoginFormContent in a Suspense boundary
+export function LoginForm() {
+  return (
+    <Suspense fallback={<LoginFormLoading />}>
+      <LoginFormContent />
+    </Suspense>
   );
 } 
