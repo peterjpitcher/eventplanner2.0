@@ -192,13 +192,52 @@ This phase expanded on the SMS infrastructure to implement booking confirmations
 - Created more robust error handling throughout the SMS flow
 - Enhanced booking flow with better status messages and user experience
 
-### Phase 9: SMS Reminders ⬜
+### Phase 9: SMS Reminders ✅
 
-This upcoming phase will focus on implementing automated SMS reminders:
+This phase focused on implementing automated SMS reminders:
 
-- Create a scheduled job system for sending reminders
-- Implement reminder timing configuration
-- Add reminder templates and customization
-- Build reminder history tracking
-- Create manual reminder triggering functionality
-- Implement reminder opt-out handling 
+- Created a reminder service to process reminders automatically
+- Implemented both 7-day and 24-hour reminder templates with day name and time information
+- Added logic to check if reminders have already been sent to avoid duplicates 
+- Created an API endpoint for scheduled processing of reminders
+- Built reminder API endpoint for manually sending reminders for a specific booking
+- Updated booking details UI to show reminder status
+- Enhanced error handling and validation for customer data in reminders
+- Added documentation for the reminder system configuration
+- Improved booking detail view to show SMS status
+
+## Reminder System Configuration
+
+The reminder system is designed to send two types of SMS reminders:
+
+1. **7-Day Reminder**: Sent exactly 7 days before the event, mentioning the day name (e.g., "next Monday")
+2. **24-Hour Reminder**: Sent exactly 24 hours before the event (the day before)
+
+### Reminder Processing Logic
+
+- The system checks if a reminder timepoint has already passed at the time of booking creation
+- If the timepoint has passed, that specific reminder is not sent
+- Reminders are only sent for bookings with valid customer contact information
+- The system tracks which reminders have been sent to avoid duplicates
+
+### Manual Reminder Triggering
+
+Staff can manually trigger reminders for a booking through the booking details page. This feature is useful for:
+- Testing reminder functionality
+- Sending an additional reminder when needed
+- Resending a reminder that failed to send
+
+### Reminder Status Tracking
+
+The system tracks the status of each reminder:
+- **Not Sent**: The reminder is scheduled but has not been sent yet
+- **Sent**: The reminder has been successfully delivered
+- **Error**: The reminder failed to send (with error details)
+
+### Technical Implementation
+
+The reminder system uses:
+- The date-fns library for accurate date calculations and formatting
+- A background job that can be triggered on a schedule
+- Error handling to gracefully manage failures
+- Status tracking in the database for each reminder attempt 

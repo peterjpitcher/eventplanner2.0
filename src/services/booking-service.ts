@@ -93,7 +93,7 @@ export const bookingService = {
   /**
    * Create a new booking
    */
-  async createBooking(booking: BookingFormData): Promise<{ data: Booking | null; error: any }> {
+  async createBooking(booking: BookingFormData): Promise<{ data: Booking | null; error: any; smsSent?: boolean }> {
     try {
       const { data, error } = await supabase
         .from('bookings')
@@ -106,8 +106,11 @@ export const bookingService = {
         .single();
       
       if (error) {
-        return { data: null, error };
+        return { data: null, error, smsSent: false };
       }
+
+      // Initialize SMS sent flag
+      let smsSent = false;
 
       // If SMS is enabled, send a booking confirmation
       if (process.env.SMS_ENABLED === 'true' && data) {
@@ -120,16 +123,13 @@ export const bookingService = {
             (await eventService.getEventById(data.event_id)).data;
           
           if (customer && event) {
-            // Send SMS in the background - don't wait for it to complete
-            smsService.sendBookingConfirmation(data, customer, event)
-              .then((smsResult) => {
-                if (!smsResult.success) {
-                  console.error('Error sending booking confirmation SMS:', smsResult.error);
-                }
-              })
-              .catch((err) => {
-                console.error('Unexpected error sending booking confirmation SMS:', err);
-              });
+            // Send SMS and wait for the result
+            const smsResult = await smsService.sendBookingConfirmation(data, customer, event);
+            smsSent = smsResult.success;
+            
+            if (!smsResult.success) {
+              console.error('Error sending booking confirmation SMS:', smsResult.error);
+            }
           }
         } catch (smsError) {
           console.error('Error processing SMS for booking:', smsError);
@@ -137,10 +137,10 @@ export const bookingService = {
         }
       }
 
-      return { data, error: null };
+      return { data, error: null, smsSent };
     } catch (err) {
       console.error('Unexpected error creating booking:', err);
-      return { data: null, error: err };
+      return { data: null, error: err, smsSent: false };
     }
   },
 

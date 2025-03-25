@@ -13,10 +13,14 @@ export function QuickBook({ eventId, onSuccess }: QuickBookProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+  const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [smsStatus, setSmsStatus] = useState<'sent' | 'failed' | null>(null);
 
   const handleSubmit = async (data: BookingFormData) => {
     setIsSubmitting(true);
     setError(null);
+    setBookingSuccess(false);
+    setSmsStatus(null);
 
     try {
       const response = await bookingService.createBooking(data);
@@ -25,10 +29,18 @@ export function QuickBook({ eventId, onSuccess }: QuickBookProps) {
         console.error('Error creating booking:', response.error);
         setError('Failed to create booking. Please try again.');
       } else {
-        setShowForm(false);
-        if (onSuccess) {
-          onSuccess();
-        }
+        setBookingSuccess(true);
+        setSmsStatus(response.smsSent ? 'sent' : 'failed');
+        
+        setTimeout(() => {
+          setShowForm(false);
+          setBookingSuccess(false);
+          setSmsStatus(null);
+          
+          if (onSuccess) {
+            onSuccess();
+          }
+        }, 3000); // Auto-close after success
       }
     } catch (err) {
       console.error('Unexpected error creating booking:', err);
@@ -64,6 +76,18 @@ export function QuickBook({ eventId, onSuccess }: QuickBookProps) {
               </div>
             )}
             
+            {bookingSuccess && (
+              <div className="mb-4 p-3 bg-green-50 text-green-700 border border-green-200 rounded-md">
+                <p>Booking created successfully!</p>
+                {smsStatus === 'sent' && (
+                  <p className="text-sm mt-1">Confirmation SMS sent to customer.</p>
+                )}
+                {smsStatus === 'failed' && (
+                  <p className="text-sm mt-1 text-yellow-600">Note: Confirmation SMS could not be sent.</p>
+                )}
+              </div>
+            )}
+            
             <BookingForm
               eventId={eventId}
               onSubmit={handleSubmit}
@@ -73,7 +97,11 @@ export function QuickBook({ eventId, onSuccess }: QuickBookProps) {
             <div className="mt-4">
               <button
                 type="button"
-                onClick={() => setShowForm(false)}
+                onClick={() => {
+                  setShowForm(false);
+                  setError(null);
+                  setBookingSuccess(false);
+                }}
                 className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 Cancel

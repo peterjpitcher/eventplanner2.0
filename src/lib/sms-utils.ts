@@ -42,6 +42,7 @@ export async function sendSMS(
     // Ensure environment variables are set
     const accountSid = process.env.TWILIO_ACCOUNT_SID;
     const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     
     if (!accountSid || !authToken || !from) {
       console.error('Missing Twilio credentials or phone number');
@@ -78,6 +79,9 @@ export async function sendSMS(
       };
     }
 
+    // Build status callback URL
+    const statusCallbackUrl = `${appUrl}/api/webhooks/twilio/status`;
+
     // Real Twilio API call
     const twilioClient = require('twilio')(accountSid, authToken);
     
@@ -85,6 +89,7 @@ export async function sendSMS(
       body,
       from,
       to: formattedNumber,
+      statusCallback: statusCallbackUrl // Add status callback URL for delivery updates
     });
 
     return {

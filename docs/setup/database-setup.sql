@@ -64,7 +64,8 @@ CREATE TABLE IF NOT EXISTS sms_messages (
   message_type TEXT NOT NULL, -- 'booking_confirmation', 'reminder', 'cancellation', etc.
   message_content TEXT NOT NULL,
   sent_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  status TEXT NOT NULL -- 'sent', 'delivered', 'failed', etc.
+  status TEXT NOT NULL, -- 'sent', 'delivered', 'failed', etc.
+  message_sid TEXT -- Twilio message SID for status tracking
 );
 
 -- SMS Replies table for tracking customer replies

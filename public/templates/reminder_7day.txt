@@ -1,0 +1,1 @@
+Hi {{customer_name}}, this is a reminder about your booking for {{event_name}} next {{event_day_name}} at {{event_time}}. We look forward to seeing you here! Reply to this message if you need to make any changes. The Anchor. 

@@ -4,6 +4,21 @@ import { Customer } from '@/types';
 import { Booking } from './booking-service';
 import { Event } from './event-service';
 
+export type SMSMessageType = 
+  'booking_confirmation' | 
+  'reminder_7day' | 
+  'reminder_24hr' | 
+  'booking_cancellation' | 
+  'event_cancellation' | 
+  'test';
+
+export type SMSStatus = 
+  'queued' | 
+  'sent' | 
+  'delivered' | 
+  'failed' | 
+  'undelivered';
+
 export interface SMSMessage {
   id: string;
   customer_id: string;
@@ -12,26 +27,11 @@ export interface SMSMessage {
   message_content: string;
   sent_at: string;
   status: SMSStatus;
+  message_sid?: string;
   // Join data
   customer?: Customer;
   booking?: Booking;
 }
-
-export type SMSMessageType = 
-  | 'booking_confirmation' 
-  | 'booking_reminder_7days' 
-  | 'booking_reminder_24hrs' 
-  | 'booking_cancellation' 
-  | 'event_cancellation' 
-  | 'manual';
-
-export type SMSStatus = 
-  | 'queued' 
-  | 'sent' 
-  | 'delivered' 
-  | 'failed' 
-  | 'undelivered' 
-  | 'simulated';
 
 export interface SMSReply {
   id: string;
@@ -44,37 +44,15 @@ export interface SMSReply {
   customer?: Customer;
 }
 
-export interface SMSTemplateVariables {
-  customer_name: string;
+interface BookingReminderData {
   event_name: string;
   event_date: string;
   event_time: string;
-  event_day_name?: string;
-  seats?: string;
-  [key: string]: string | undefined;
+  event_day_name: string;
+  customer_name: string;
+  seats: string;
+  [key: string]: string;
 }
-
-/**
- * SMS Templates for different message types
- * These would typically be stored in the database or in a CMS,
- * but for simplicity, we're hardcoding them here
- */
-export const SMS_TEMPLATES: Record<string, string> = {
-  booking_confirmation: 
-    "Hi {{customer_name}}, your booking for {{event_name}} on {{event_date}} at {{event_time}} is confirmed. We've reserved {{seats}} for you. Reply to this message if you need to make any changes. The Anchor.",
-  
-  booking_reminder_7days:
-    "Hi {{customer_name}}, this is a reminder about your booking for {{event_name}} next {{event_day_name}} at {{event_time}}. We look forward to seeing you here! Reply to this message if you need to make any changes. The Anchor.",
-  
-  booking_reminder_24hrs:
-    "Hi {{customer_name}}, just a reminder that you're booked for {{event_name}} tomorrow at {{event_time}}. We look forward to seeing you! Reply to this message if you need to make any changes. The Anchor.",
-  
-  booking_cancellation:
-    "Hi {{customer_name}}, your booking for {{event_name}} on {{event_date}} at {{event_time}} has been cancelled. If this was not requested by you or if you have any questions, please contact us. The Anchor.",
-  
-  event_cancellation:
-    "Hi {{customer_name}}, we regret to inform you that {{event_name}} scheduled for {{event_date}} at {{event_time}} has been cancelled. We apologize for any inconvenience. Please contact us if you have any questions. The Anchor."
-};
 
 export const smsService = {
   /**
@@ -126,45 +104,85 @@ export const smsService = {
   },
 
   /**
-   * Get all SMS replies
+   * Determine if a customer has been sent a specific reminder type for a booking
    */
-  async getReplies(): Promise<{ data: SMSReply[] | null; error: any }> {
-    const { data, error } = await supabase
-      .from('sms_replies')
-      .select(`
-        *,
-        customer:customer_id (*)
-      `)
-      .order('received_at', { ascending: false });
+  async hasReceivedReminder(bookingId: string, reminderType: string): Promise<boolean> {
+    const { data } = await supabase
+      .from('sms_messages')
+      .select('id')
+      .eq('booking_id', bookingId)
+      .eq('message_type', `reminder_${reminderType}`)
+      .limit(1);
     
-    return { data, error };
+    return data !== null && data.length > 0;
   },
 
   /**
-   * Get SMS replies for a specific customer
+   * Count unread SMS replies
    */
-  async getRepliesByCustomer(customerId: string): Promise<{ data: SMSReply[] | null; error: any }> {
-    const { data, error } = await supabase
+  async countUnreadReplies(): Promise<{ count: number; error: any }> {
+    const { count, error } = await supabase
       .from('sms_replies')
-      .select('*')
-      .eq('customer_id', customerId)
-      .order('received_at', { ascending: false });
+      .select('id', { count: 'exact', head: true })
+      .eq('read', false);
     
-    return { data, error };
+    return { count: count || 0, error };
   },
 
   /**
    * Mark an SMS reply as read
    */
-  async markReplyAsRead(replyId: string): Promise<{ data: SMSReply | null; error: any }> {
-    const { data, error } = await supabase
+  async markReplyAsRead(replyId: string): Promise<{ success: boolean; error: any }> {
+    const { error } = await supabase
       .from('sms_replies')
       .update({ read: true })
-      .eq('id', replyId)
-      .select()
-      .single();
+      .eq('id', replyId);
     
-    return { data, error };
+    return { success: !error, error };
+  },
+
+  /**
+   * Receive and process an SMS reply from a customer
+   */
+  async receiveReply({ fromNumber, messageContent }: { fromNumber: string; messageContent: string }): Promise<{ success: boolean; error?: any }> {
+    try {
+      // Find customer by mobile number
+      const { data: customers, error: customerError } = await supabase
+        .from('customers')
+        .select('id, first_name, last_name')
+        .eq('mobile_number', fromNumber)
+        .limit(1);
+      
+      if (customerError) {
+        return { success: false, error: customerError };
+      }
+      
+      if (!customers || customers.length === 0) {
+        return { success: false, error: 'Customer not found for this mobile number' };
+      }
+      
+      const customerId = customers[0].id;
+      
+      // Store the reply
+      const { error: replyError } = await supabase
+        .from('sms_replies')
+        .insert({
+          customer_id: customerId,
+          from_number: fromNumber,
+          message_content: messageContent,
+          received_at: new Date().toISOString(),
+          read: false
+        });
+      
+      if (replyError) {
+        return { success: false, error: replyError };
+      }
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error processing SMS reply:', error);
+      return { success: false, error };
+    }
   },
 
   /**
@@ -214,7 +232,8 @@ export const smsService = {
         message_type: messageType,
         message_content: messageContent,
         status: response.message?.status || 'sent',
-        sent_at: new Date().toISOString()
+        sent_at: new Date().toISOString(),
+        message_sid: response.message?.sid
       });
 
       if (dbError) {
@@ -237,93 +256,117 @@ export const smsService = {
   /**
    * Send a booking confirmation SMS
    */
-  async sendBookingConfirmation(
-    booking: Booking, 
-    customer: Customer, 
-    event: Event
-  ): Promise<{ success: boolean; messageSid?: string; error?: any }> {
-    // Create template variables
-    const eventDate = new Date(event.date).toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'long'
-    });
-    
-    const eventTime = event.start_time.substring(0, 5); // Format HH:MM
-    
-    const seats = booking.seats_or_reminder.includes('seat') 
-      ? booking.seats_or_reminder 
-      : 'a reminder';
-
-    const templateVars: SMSTemplateVariables = {
-      customer_name: customer.first_name,
-      event_name: event.title,
-      event_date: eventDate,
-      event_time: eventTime,
-      seats: seats
-    };
-
-    // Process the template
-    const messageContent = processTemplate(
-      SMS_TEMPLATES.booking_confirmation, 
-      templateVars
-    );
-
-    // Send the message
-    return this.sendSMSToCustomer({
-      customer,
-      messageType: 'booking_confirmation',
-      messageContent,
-      bookingId: booking.id
-    });
-  },
-
-  /**
-   * Receive an SMS reply (for webhook endpoint)
-   */
-  async receiveReply({
-    fromNumber,
-    messageContent
+  async sendBookingConfirmation({
+    customerId,
+    bookingId,
+    eventName,
+    eventDate,
+    eventTime,
+    seats,
+    customerName
   }: {
-    fromNumber: string;
-    messageContent: string;
+    customerId: string;
+    bookingId: string;
+    eventName: string;
+    eventDate: string;
+    eventTime: string;
+    seats: string;
+    customerName: string;
   }): Promise<{ success: boolean; error?: any }> {
     try {
-      // Find customer by phone number
-      const { data: customers, error: customerError } = await supabase
+      // Get the customer
+      const { data: customer, error: customerError } = await supabase
         .from('customers')
         .select('*')
-        .eq('mobile_number', fromNumber)
-        .limit(1);
-
-      if (customerError) {
-        console.error('Error finding customer:', customerError);
-        return { success: false, error: customerError };
+        .eq('id', customerId)
+        .single();
+      
+      if (customerError || !customer) {
+        return { success: false, error: customerError || 'Customer not found' };
       }
 
-      // If no customer found, create a record anyway with null customer_id
-      const customerId = customers && customers.length > 0 
-        ? customers[0].id 
-        : null;
-
-      // Record the reply
-      const { error: replyError } = await supabase
-        .from('sms_replies')
-        .insert({
-          customer_id: customerId,
-          from_number: fromNumber,
-          message_content: messageContent,
-          received_at: new Date().toISOString(),
-          read: false
-        });
-
-      if (replyError) {
-        console.error('Error recording SMS reply:', replyError);
-        return { success: false, error: replyError };
+      // Load the template
+      const templatePath = '/templates/booking_confirmation.txt';
+      const response = await fetch(templatePath);
+      if (!response.ok) {
+        return { success: false, error: `Failed to load template: ${response.statusText}` };
       }
+      
+      const template = await response.text();
+      
+      // Process the template with variables
+      const messageContent = processTemplate(template, {
+        customer_name: customerName,
+        event_name: eventName,
+        event_date: eventDate,
+        event_time: eventTime,
+        seats
+      });
 
-      return { success: true };
+      // Send the SMS
+      return await this.sendSMSToCustomer({
+        customer,
+        messageType: 'booking_confirmation',
+        messageContent,
+        bookingId
+      });
     } catch (error) {
-      console.error('Unexpected error receiving SMS reply:', error);
+      console.error('Error sending booking confirmation:', error);
+      return { success: false, error };
+    }
+  },
+  
+  /**
+   * Send a booking reminder SMS (7-day or 24-hour)
+   */
+  async sendBookingReminder({
+    customerId,
+    bookingId,
+    reminderType,
+    reminderData
+  }: {
+    customerId: string;
+    bookingId: string;
+    reminderType: '7day' | '24hr';
+    reminderData: BookingReminderData;
+  }): Promise<{ success: boolean; error?: any }> {
+    try {
+      // Get the customer
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customerId)
+        .single();
+      
+      if (customerError || !customer) {
+        return { success: false, error: customerError || 'Customer not found' };
+      }
+      
+      // Determine which template to use based on reminderType
+      const templateName = reminderType === '7day' ? 'reminder_7day' : 'reminder_24hr';
+      const messageType: SMSMessageType = reminderType === '7day' ? 'reminder_7day' : 'reminder_24hr';
+      
+      // Load the template
+      const templatePath = `/templates/${templateName}.txt`;
+      const response = await fetch(templatePath);
+      if (!response.ok) {
+        return { success: false, error: `Failed to load template: ${response.statusText}` };
+      }
+      
+      const template = await response.text();
+      
+      // Process the template with variables
+      const messageContent = processTemplate(template, reminderData);
+
+      // Send the SMS
+      return await this.sendSMSToCustomer({
+        customer,
+        messageType,
+        messageContent,
+        bookingId
+      });
+    } catch (error) {
+      console.error(`Error sending ${reminderType} reminder:`, error);
       return { success: false, error };
     }
   }

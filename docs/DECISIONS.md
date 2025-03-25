@@ -302,3 +302,108 @@ This document captures key decisions made during the development of the Event Ma
 1. **Client/Server Component Split**
    - Used wrapper components to bridge between server components (event details) and client components (booking lists/forms)
    - Maintained clear separation of concerns between data fetching and UI interaction
+
+## Phase 7: SMS Integration
+
+### SMS Service Architecture
+1. **Service Layer Approach**
+   - Created a centralized SMS service to manage all SMS operations
+   - Separated concerns between SMS utility functions and business logic
+   - Implemented a clean interface for sending different types of messages
+
+### Phone Number Handling
+1. **UK Number Standardization**
+   - Implemented comprehensive phone number formatting for UK mobile numbers
+   - Added support for multiple input formats (+44, 07XXX, etc.)
+   - Created conversion utilities to E.164 format required by Twilio
+
+### Twilio Integration
+1. **Webhook Handling**
+   - Set up a dedicated endpoint for Twilio webhooks
+   - Implemented proper response format for Twilio (TwiML)
+   - Added error handling for malformed requests
+
+2. **Development Mode**
+   - Created a simulation mode for development without sending real messages
+   - Added detailed logging for simulated messages
+   - Implemented a test endpoint for manual testing
+
+### Error Handling
+1. **Graceful Degradation**
+   - Designed the system to continue booking operations even if SMS fails
+   - Added comprehensive error logging for SMS failures
+   - Implemented retry logic where appropriate
+
+### SMS Templates
+1. **Template System**
+   - Created a flexible template system with variable replacement
+   - Defined standard templates for different message types
+   - Ensured consistent branding and messaging across all communications
+
+### Database Design
+1. **Message Tracking**
+   - Implemented tables for tracking sent messages and their status
+   - Added storage for SMS replies with customer association
+   - Created indexes for efficient querying of message history
+
+### Security Considerations
+1. **Environment Variables**
+   - Used secure environment variables for storing sensitive Twilio credentials
+   - Added configuration options to enable/disable SMS functionality
+   - Created documentation for secure setup
+
+## Phase 9: SMS Reminders
+
+### Reminder System Design
+
+1. **Reminder Types**
+   - **Decision**: Implemented two distinct reminder types (7-day and 24-hour)
+   - **Reasoning**: This provides balanced communication - an early reminder for planning and a just-in-time reminder to reduce no-shows
+   - **Alternatives Considered**: Single reminder, configurable reminder times per event
+   - **Date**: 2024-05-15
+
+2. **Processing Logic**
+   - **Decision**: Skip reminders for timepoints that have already passed when a booking is created
+   - **Reasoning**: Avoids sending irrelevant reminders (e.g., a 7-day reminder when booking is made 3 days before the event)
+   - **Alternatives Considered**: Adjusting reminder timing for late bookings, sending all reminders regardless of timing
+   - **Date**: 2024-05-15
+
+3. **Technical Implementation**
+   - **Decision**: Used date-fns for date calculations and formatting
+   - **Reasoning**: date-fns provides accurate date manipulation with timezone handling, which is critical for scheduling reminders
+   - **Alternatives Considered**: moment.js, native JavaScript Date objects
+   - **Date**: 2024-05-15
+
+### Process Automation
+
+1. **Service Architecture**
+   - **Decision**: Created a dedicated reminder service separate from the SMS service
+   - **Reasoning**: Maintains separation of concerns - SMS service handles message delivery while reminder service handles scheduling and processing logic
+   - **Alternatives Considered**: Integrated with booking service, single SMS service with reminder functions
+   - **Date**: 2024-05-15
+
+2. **Error Handling**
+   - **Decision**: Implemented robust error handling with status tracking for each reminder attempt
+   - **Reasoning**: Provides visibility into the reminder process and enables retries for failed attempts
+   - **Alternatives Considered**: Simple success/failure tracking without detailed errors
+   - **Date**: 2024-05-15
+
+3. **Customer Data Validation**
+   - **Decision**: Added multiple validation layers for customer data in reminder processing
+   - **Reasoning**: Prevents failures due to missing or invalid customer information, improving system reliability
+   - **Alternatives Considered**: Relying on database constraints, simpler validation patterns
+   - **Date**: 2024-05-15
+
+### User Experience
+
+1. **Manual Triggers**
+   - **Decision**: Added ability to manually trigger reminders from booking details page
+   - **Reasoning**: Gives staff control to send additional reminders when needed or retry failed ones
+   - **Alternatives Considered**: Fully automated system without manual intervention
+   - **Date**: 2024-05-15
+
+2. **Status Visibility**
+   - **Decision**: Added visual indicators for reminder status in the booking details view
+   - **Reasoning**: Provides transparency about which reminders have been sent, are pending, or have failed
+   - **Alternatives Considered**: SMS log without explicit reminder status tracking
+   - **Date**: 2024-05-15
