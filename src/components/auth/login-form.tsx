@@ -1,25 +1,24 @@
 'use client';
 
-import React, { useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
-// Extract the part that uses useSearchParams into a separate component
-function LoginFormContent() {
-  const { signIn } = useAuth();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
-  
+// This component doesn't use useSearchParams anymore
+export function LoginForm() {
+  // States
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Auth context
+  const { signIn } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Form submission handler that takes a redirectTo parameter
+  const handleSubmit = async (e: React.FormEvent, redirectTo: string = '/dashboard') => {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
@@ -29,14 +28,15 @@ function LoginFormContent() {
       
       if (error) {
         setError(error.message);
+        setIsLoading(false);
         return;
       }
       
-      router.push(redirectTo);
+      // Use window.location for client-side navigation to avoid useRouter
+      window.location.href = redirectTo;
     } catch (err) {
       setError('An unexpected error occurred');
       console.error(err);
-    } finally {
       setIsLoading(false);
     }
   };
@@ -51,7 +51,15 @@ function LoginFormContent() {
         </div>
       )}
       
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form 
+        onSubmit={(e) => {
+          // Get redirectTo from URL search params on the client side
+          const params = new URLSearchParams(window.location.search);
+          const redirectTo = params.get('redirectTo') || '/dashboard';
+          handleSubmit(e, redirectTo);
+        }} 
+        className="space-y-4"
+      >
         <Input
           label="Email"
           type="email"
@@ -99,28 +107,5 @@ function LoginFormContent() {
         </Link>
       </div>
     </div>
-  );
-}
-
-// Create a loading fallback component
-function LoginFormLoading() {
-  return (
-    <div className="w-full max-w-md p-6 bg-white rounded-lg shadow-md">
-      <div className="h-6 w-48 bg-gray-200 rounded-md animate-pulse mx-auto mb-6"></div>
-      <div className="space-y-4">
-        <div className="h-10 bg-gray-200 rounded-md animate-pulse"></div>
-        <div className="h-10 bg-gray-200 rounded-md animate-pulse"></div>
-        <div className="h-10 bg-gray-200 rounded-md animate-pulse mt-4"></div>
-      </div>
-    </div>
-  );
-}
-
-// Main component that wraps the LoginFormContent in a Suspense boundary
-export function LoginForm() {
-  return (
-    <Suspense fallback={<LoginFormLoading />}>
-      <LoginFormContent />
-    </Suspense>
   );
 } 
