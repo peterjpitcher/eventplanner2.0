@@ -13,7 +13,7 @@ export default function Home() {
           Login
         </Link>
         <a 
-          href="https://github.com/yourusername/event-planner" 
+          href="https://github.com/peterjpitcher/eventplanner2.0" 
           target="_blank" 
           rel="noopener noreferrer" 
           className="px-6 py-3 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors"

@@ -32,8 +32,8 @@ A comprehensive web application for managing pub events, customer registrations,
 
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
-   cd event-planner
+   git clone https://github.com/peterjpitcher/eventplanner2.0.git
+   cd eventplanner2.0
    ```
 
 2. Install dependencies:
