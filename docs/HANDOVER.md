@@ -1,147 +1,159 @@
-# Event Planner Project Handover
+# Project Handover Documentation
 
-This document provides a comprehensive overview of the Event Planner project, its current status, and the next steps for development.
+## Event Planner 2.0
 
-## Project Status Overview
+A web application to efficiently manage pub events, customer registrations, bookings, and automated SMS notifications.
 
-- **Current Phase**: Phase 3 (Customer Management - Basic) completed on May 5, 2025
-- **Next Phase**: Phase 4 (Event Categories)
-- **GitHub Repository**: [https://github.com/peterjpitcher/eventplanner2.0.git](https://github.com/peterjpitcher/eventplanner2.0.git)
-- **Development Server**: Running on http://localhost:3001
+**Production URL**: [eventplanner.orangejelly.co.uk](https://eventplanner.orangejelly.co.uk)
 
-## Completed Phases
+## Table of Contents
 
-### Phase 1: Project Setup ✅
+1. [Project Overview](#project-overview)
+2. [Tech Stack](#tech-stack)
+3. [Project Structure](#project-structure)
+4. [Key Features](#key-features)
+5. [Authentication](#authentication)
+6. [Deployment](#deployment)
+7. [Known Issues and Solutions](#known-issues-and-solutions)
+8. [Future Improvements](#future-improvements)
 
-- Created Next.js project with TypeScript
-- Configured Tailwind CSS
-- Set up project structure
-- Configured Supabase client
-- Set up environment variables
-- Configured ESLint
-- Set up GitHub repository
+## Project Overview
 
-### Phase 2: Authentication & Navigation ✅
+Event Planner 2.0 is a comprehensive web application designed for pub owners and event managers to efficiently handle:
 
-- Implemented Supabase authentication
-- Created login and registration pages
-- Implemented authentication context and hooks
-- Added route protection for authenticated routes
-- Created responsive navigation (desktop sidebar and mobile bottom navigation)
-- Implemented user profile management
+- Customer registration and management
+- Event creation and scheduling
+- Booking management
+- SMS notifications
 
-### Phase 3: Customer Management - Basic ✅
+The application provides an intuitive interface for managing these tasks with role-based access control, allowing different staff members to have appropriate access levels.
 
-- Created customer service layer for database operations
-- Implemented customer list view with search functionality
-- Created customer forms with UK mobile number validation
-- Added customer detail view
-- Implemented customer editing and deletion
-- Created comprehensive documentation
+## Tech Stack
 
-## Repository Status
+- **Frontend**: Next.js 14, React, TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Authentication, Storage)
+- **Deployment**: Vercel
+- **Version Control**: Git, GitHub
 
-- **Main Branch**: Contains Phase 1 implementation
-- **Phase-2-Clean Branch**: Contains Phase 2 implementation
-- **Important Note**: A PR needs to be created from `phase-2-clean` to `main` and merged through GitHub's interface due to GitHub's secret scanning detecting potential secrets in the commit history.
+## Project Structure
 
-## Project Documentation
+The project follows a modern Next.js 14 App Router structure:
 
-The project has extensive documentation available in the `docs/` directory:
+```
+├── src/
+│   ├── app/                    # Next.js pages and layouts
+│   │   ├── (dashboard)/        # Protected dashboard routes
+│   │   ├── auth/               # Authentication pages
+│   │   └── ...
+│   ├── components/             # React components
+│   │   ├── auth/               # Authentication components
+│   │   ├── navigation/         # Navigation components
+│   │   ├── ui/                 # Reusable UI components
+│   │   └── ...
+│   ├── contexts/               # React context providers
+│   ├── hooks/                  # Custom React hooks
+│   ├── lib/                    # Utility functions and libraries
+│   └── types/                  # TypeScript type definitions
+├── public/                     # Static assets
+├── docs/                       # Project documentation
+└── next.config.js              # Next.js configuration
+```
 
-### Core Implementation Documentation
+## Key Features
 
-- **[Implementation Plan](docs/IMPLEMENTATION_PLAN.md)**: Phased approach and timeline, with Phases 1-2 marked as complete
-- **[Project Decisions](docs/DECISIONS.md)**: Key technical decisions and their rationale
-- **[Authentication Flow](docs/AUTHENTICATION.md)**: Detailed documentation of the authentication system
-- **[Navigation Components](docs/NAVIGATION.md)**: Overview of the navigation structure and components
+### 1. Authentication System
 
-### Project Specification Documents
+- Email/password authentication via Supabase
+- Protected routes with role-based access
+- Redirect handling from protected routes
 
-- **[Product Requirements Document](docs/PRD.md)**: Core requirements and user stories
-- **[Architecture Overview](docs/ARCHITECTURE.md)**: System architecture and technical design
-- **[API Documentation](docs/API.md)**: API endpoints and usage
-- **[Database Setup](docs/DATABASE_SETUP.sql)**: SQL script for database initialization
+### 2. Customer Management
 
-### Process Documentation
+- Add, edit, and delete customer records
+- Search and filter functionality
+- Customer details with contact information
 
-- **[Development Workflow](docs/WORKFLOW.md)**: Git workflow and development processes
-- **[Setup Guide](docs/SETUP.md)**: Project setup instructions
-- **[Testing Strategies](docs/TESTING.md)**: Testing approaches and methodologies
+### 3. Navigation
 
-## Key Components
+- Responsive design with mobile and desktop layouts
+- Sidebar navigation for desktop
+- Mobile bottom navigation
 
-### Authentication
+## Authentication
 
+The authentication system is built using Supabase Auth.
+
+- **Login Page**: `/auth/login`
+- **Register Page**: `/auth/register`
 - **Auth Context**: `src/contexts/auth-context.tsx` - React context for auth state management
-- **RequireAuth Hook**: `src/hooks/use-require-auth.ts` - Hook for route protection
-- **Auth Forms**: `src/components/auth/login-form.tsx` and `src/components/auth/register-form.tsx`
+- **Protected Routes**: `src/hooks/use-require-auth.ts` - Hook to protect dashboard routes
 
-### Navigation
+The auth flow includes:
+1. User signs up/logs in via the auth pages
+2. Auth state is managed through React context
+3. Protected routes redirect unauthenticated users
 
-- **Desktop Sidebar**: `src/components/navigation/sidebar.tsx`
-- **Mobile Navigation**: `src/components/navigation/mobile-nav.tsx`
-- **Dashboard Layout**: `src/app/(dashboard)/layout.tsx` - Authenticated layout with navigation
+## Deployment
 
-### UI Components
+The application is deployed on Vercel from the `phase-2-clean` branch.
 
-- **Button**: `src/components/ui/button.tsx`
-- **Input**: `src/components/ui/input.tsx`
+- **Production URL**: [eventplanner.orangejelly.co.uk](https://eventplanner.orangejelly.co.uk)
+- **Deployment Branch**: `phase-2-clean`
+- **Build Command**: `next build`
 
-## Environment Configuration
+For detailed deployment information and troubleshooting, see [DEPLOYMENT.md](./DEPLOYMENT.md).
 
-- A template environment file is available at `.env.local.example`
-- Local development requires:
-  - Supabase URL and anon key
-  - (Later phases) Twilio credentials
+### Client-Side Rendering Solutions
 
-## Next Steps: Phase 4 - Event Categories
+Recent deployment fixes focused on addressing Next.js 14's client-side rendering requirements:
 
-### Planned Tasks:
+1. **Proper Client Components**:
+   - Client components using browser APIs are properly marked with `'use client'`
+   - Components using browser APIs are wrapped in Suspense boundaries
+   - ClientOnly pattern implemented for safe client-side rendering
 
-1. Create Supabase tables for event categories
-2. Implement event category list view
-3. Create event category creation form with validation
-4. Implement event category editing
-5. Add event category deletion functionality
-6. Implement basic event category search
+2. **Next.js Configuration**:
+   - Simplified configuration in `next.config.js`
+   - Proper experimental flags set for production
 
-### Technical Considerations:
+## Known Issues and Solutions
 
-- Database schema needs to be carefully designed to support future event category features
-- Consider implementing optimistic UI updates for better user experience
+### 1. useSearchParams() CSR Bailout
 
-## Development Environment
+**Issue**: Next.js 14 requires components using `useSearchParams()` to be wrapped in Suspense boundaries.
 
-- **Node.js**: v18.17.0 or later
-- **Package Manager**: npm
-- **Development Server**: http://localhost:3001
-- **Required Accounts**:
-  - Supabase account (for authentication and database)
-  - Twilio account (will be needed for Phase 7 - SMS Integration)
+**Solution**: 
+- Use the ClientOnly pattern for components accessing browser APIs
+- Implement proper Suspense boundaries
+- Separate client and server concerns
 
-## Getting Started for New Developers
+### 2. Metadata in Client Components
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/peterjpitcher/eventplanner2.0.git
-   cd eventplanner2.0
-   ```
+**Issue**: Client components cannot export metadata.
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+**Solution**:
+- Use separate metadata files for routes
+- Keep pages as server components where possible
+- Create separate client components for interactive elements
 
-3. Set up environment variables:
-   ```bash
-   cp .env.local.example .env.local
-   ```
-   Then fill in the required values in `.env.local`
+## Future Improvements
 
-4. Run the development server:
-   ```bash
-   npm run dev
-   ```
+1. **Event Management**:
+   - Create events with details, capacity, and pricing
+   - Calendar view for scheduling
 
-5. Open [http://localhost:3001](http://localhost:3001) in your browser to see the application. 
+2. **Booking System**:
+   - Allow customers to book events
+   - Manage event capacity and waitlists
+
+3. **SMS Notifications**:
+   - Integration with SMS service
+   - Automated reminders and notifications
+
+4. **Analytics Dashboard**:
+   - Event attendance insights
+   - Customer engagement metrics
+
+5. **Performance Optimizations**:
+   - Implement more efficient data fetching patterns
+   - Optimize component rendering 
