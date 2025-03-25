@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { eventService } from '@/services/event-service';
 import { formatDateTime, formatDuration } from '@/lib/date-utils';
+import { BookingListWrapper } from './booking-list-wrapper';
+import { QuickBookWrapper } from './quick-book-wrapper';
 
 export async function generateMetadata({ params }: { params: { id: string } }) {
   const { data: event } = await eventService.getEventById(params.id);
@@ -149,6 +151,15 @@ export default async function EventDetailsPage({ params }: { params: { id: strin
             </div>
           </div>
         </div>
+      </div>
+
+      {/* Quick Book section */}
+      <QuickBookWrapper eventId={event.id} />
+
+      {/* Bookings section */}
+      <div className="mt-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">Bookings</h2>
+        <BookingListWrapper eventId={event.id} />
       </div>
     </div>
   );

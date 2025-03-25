@@ -251,3 +251,54 @@ This document captures key decisions made during the development of the Event Ma
 3. **Advanced Filtering**
    - Will add more sophisticated filtering and search capabilities as event volume grows.
    - Plan to implement saved searches for frequently used filters.
+
+## Phase 6: Booking Management
+
+### Data Model
+1. **Booking Entity Design**
+   - Created a comprehensive booking model with fields for customer_id, event_id, seats_or_reminder, and notes
+   - Implemented many-to-one relationships with both events and customers
+   - Used a flexible "seats_or_reminder" field to accommodate different booking types (seat reservations vs. notifications)
+
+### UI Components
+1. **Booking List Component**
+   - Implemented a dedicated component for displaying bookings associated with an event
+   - Added functionality to delete bookings with confirmation
+   - Included customer details from joined data for easy reference
+
+2. **Quick Book Component**
+   - Created a streamlined booking creation interface accessible from event details
+   - Implemented expandable UI that only shows the form when needed
+   - Added success handling to refresh the bookings list upon successful creation
+
+3. **Booking Form Component**
+   - Built a reusable form component for both creating and editing bookings
+   - Implemented customer search functionality to filter available customers
+   - Added seats/reminder preference options including 1-5+ seats and reminder-only options
+
+### Service Layer
+1. **Booking Service Implementation**
+   - Created a service layer for booking operations with Supabase
+   - Implemented methods to fetch bookings by event or customer
+   - Included full join data (customer and event information) in query responses
+   - Added proper error handling and response formatting
+
+### Integration with Existing Components
+1. **Event Details Enhancement**
+   - Updated event details page to include booking management
+   - Used client/server component pattern with wrapper components
+   - Implemented page refreshing to keep booking list updated
+
+2. **Routing Structure**
+   - Added dedicated routes for editing bookings
+   - Maintained consistent navigation patterns with back buttons
+
+### Mobile Considerations
+1. **Responsive Design**
+   - Ensured all booking interfaces work well on mobile devices
+   - Used flexible layouts that adapt to screen size
+
+### Technical Decisions
+1. **Client/Server Component Split**
+   - Used wrapper components to bridge between server components (event details) and client components (booking lists/forms)
+   - Maintained clear separation of concerns between data fetching and UI interaction

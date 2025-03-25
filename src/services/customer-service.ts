@@ -1,21 +1,5 @@
 import { supabase } from '@/lib/supabase';
-
-export interface Customer {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CustomerFormData {
-  name: string;
-  email: string;
-  phone: string | null;
-  notes: string | null;
-}
+import { Customer, CustomerFormData } from '@/types';
 
 export const customerService = {
   /**
@@ -25,7 +9,7 @@ export const customerService = {
     const { data, error } = await supabase
       .from('customers')
       .select('*')
-      .order('name');
+      .order('first_name');
     
     return { data, error };
   },
@@ -83,14 +67,14 @@ export const customerService = {
   },
 
   /**
-   * Search customers by name or email
+   * Search customers by name or mobile number
    */
   async searchCustomers(query: string): Promise<{ data: Customer[] | null; error: any }> {
     const { data, error } = await supabase
       .from('customers')
       .select('*')
-      .or(`name.ilike.%${query}%,email.ilike.%${query}%`)
-      .order('name')
+      .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,mobile_number.ilike.%${query}%`)
+      .order('first_name')
       .limit(10);
     
     return { data, error };
