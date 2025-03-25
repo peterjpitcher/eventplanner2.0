@@ -3,10 +3,7 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  experimental: {
-    // Enable server actions (if needed in the app)
-    serverActions: true
-  }
+  // Server Actions are enabled by default in Next.js 14, no need for flag
 };
 
 module.exports = nextConfig; 
