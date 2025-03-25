@@ -1,12 +1,25 @@
-import { Metadata } from 'next';
+'use client';
+
+import React, { Suspense } from 'react';
 import { LoginForm } from '@/components/auth/login-form';
 
-export const metadata: Metadata = {
-  title: 'Login - Event Planner',
-  description: 'Log in to your Event Planner account',
-};
+// Loading component
+function LoginPageLoading() {
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-6">
+          <div className="h-8 bg-gray-200 rounded-md w-48 mx-auto animate-pulse"></div>
+          <div className="mt-2 h-4 bg-gray-200 rounded-md w-64 mx-auto animate-pulse"></div>
+        </div>
+        <div className="h-96 bg-white rounded-lg shadow-md animate-pulse"></div>
+      </div>
+    </div>
+  );
+}
 
-export default function LoginPage() {
+// Content component
+function LoginPageContent() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md">
@@ -17,5 +30,13 @@ export default function LoginPage() {
         <LoginForm />
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageLoading />}>
+      <LoginPageContent />
+    </Suspense>
   );
 } 
