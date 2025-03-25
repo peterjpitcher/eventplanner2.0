@@ -1,15 +1,17 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
+import { smsService } from '@/services/sms-service';
 
 // Navigation item interface
 interface NavItem {
   name: string;
   href: string;
   icon: (props: React.SVGProps<SVGSVGElement>) => JSX.Element;
+  badge?: number;
 }
 
 // Navigation items
@@ -84,11 +86,48 @@ const navigation: NavItem[] = [
       </svg>
     ),
   },
+  {
+    name: 'Messages',
+    href: '/messages',
+    icon: (props) => (
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+        />
+      </svg>
+    ),
+  },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const { user, signOut } = useAuth();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread message count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      const { count } = await smsService.countUnreadReplies();
+      setUnreadCount(count);
+    };
+
+    fetchUnreadCount();
+
+    // Refresh count every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Apply unread count to the Messages navigation item
+  const navigationWithBadges = navigation.map(item => {
+    if (item.name === 'Messages') {
+      return { ...item, badge: unreadCount };
+    }
+    return item;
+  });
 
   return (
     <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0">
@@ -98,7 +137,7 @@ export function Sidebar() {
         </div>
         <div className="mt-5 flex-grow flex flex-col">
           <nav className="flex-1 px-2 pb-4 space-y-1">
-            {navigation.map((item) => {
+            {navigationWithBadges.map((item) => {
               const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
@@ -114,7 +153,12 @@ export function Sidebar() {
                     className="mr-3 flex-shrink-0 h-6 w-6 text-blue-300"
                     aria-hidden="true"
                   />
-                  {item.name}
+                  <span className="flex-1">{item.name}</span>
+                  {item.badge ? (
+                    <span className="ml-3 inline-block py-0.5 px-2 text-xs font-medium rounded-full bg-red-500 text-white">
+                      {item.badge}
+                    </span>
+                  ) : null}
                 </Link>
               );
             })}

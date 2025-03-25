@@ -86,6 +86,21 @@ When a customer replies to an SMS:
 4. The reply is stored in the database as an unread message
 5. Staff can view and respond to messages in the application
 
+### Managing SMS Replies
+
+The application provides a dedicated interface for managing SMS replies:
+
+1. **Messages Page**: A centralized page shows all incoming messages with read/unread status indicators
+2. **Unread Badges**: Navigation badges show the count of unread messages
+3. **Customer Context**: Customer profile pages include a section showing that customer's message history
+4. **Message Actions**: Staff can mark individual messages or all messages as read
+
+To access SMS replies:
+1. Click on the "Messages" item in the main navigation
+2. View all messages or filter by customer
+3. Click "Mark as Read" to update message status
+4. Click "View Customer" to see the customer profile with additional context
+
 ## SMS Templates
 
 The system uses the following templates for various message types:

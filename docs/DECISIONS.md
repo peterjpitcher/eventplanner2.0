@@ -484,3 +484,31 @@ We chose option 3 - Implementing a confirmation dialog with an SMS option toggle
 - **Decision**: Added a Cancel Event button on the event details page and a confirmation dialog with SMS options
 - **Reasoning**: This provides a clear workflow for event cancellation and ensures staff consider whether to send notifications.
 - **Date**: 2024-05-26
+
+## Phase 12: SMS Reply Handling
+
+### SMS Replies Interface
+- **Decision**: Created a dedicated Messages page to view and manage customer SMS replies
+- **Reasoning**: This gives staff a centralized place to view and respond to all incoming customer messages, improving customer service.
+- **Alternatives Considered**: Embedding replies directly in booking or event interfaces
+- **Date**: 2024-05-27
+
+### Unread Message Indicators
+- **Decision**: Added unread message badges in the navigation menu
+- **Reasoning**: This ensures staff are aware of new messages without needing to actively check, leading to faster responses to customer inquiries.
+- **Date**: 2024-05-27
+
+### Message Status Management
+- **Decision**: Implemented read/unread state management with easy toggling
+- **Reasoning**: This helps staff track which messages they've already seen and prioritize new messages.
+- **Date**: 2024-05-27
+
+### Customer Context Integration
+- **Decision**: Added a messages section to customer profiles
+- **Reasoning**: Viewing messages in the context of a specific customer provides additional context for staff responses.
+- **Date**: 2024-05-27
+
+### Automatic Polling
+- **Decision**: Implemented automatic polling for new messages
+- **Reasoning**: This ensures timely notification of new messages without requiring page refreshes.
+- **Date**: 2024-05-27

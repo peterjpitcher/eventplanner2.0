@@ -130,6 +130,34 @@ export const smsService = {
   },
 
   /**
+   * Get all SMS replies
+   */
+  async getReplies(): Promise<{ data: SMSReply[] | null; error: any }> {
+    const { data, error } = await supabase
+      .from('sms_replies')
+      .select(`
+        *,
+        customer:customer_id (*)
+      `)
+      .order('received_at', { ascending: false });
+    
+    return { data, error };
+  },
+
+  /**
+   * Get SMS replies for a specific customer
+   */
+  async getRepliesByCustomer(customerId: string): Promise<{ data: SMSReply[] | null; error: any }> {
+    const { data, error } = await supabase
+      .from('sms_replies')
+      .select('*')
+      .eq('customer_id', customerId)
+      .order('received_at', { ascending: false });
+    
+    return { data, error };
+  },
+
+  /**
    * Mark an SMS reply as read
    */
   async markReplyAsRead(replyId: string): Promise<{ success: boolean; error: any }> {
@@ -137,6 +165,18 @@ export const smsService = {
       .from('sms_replies')
       .update({ read: true })
       .eq('id', replyId);
+    
+    return { success: !error, error };
+  },
+
+  /**
+   * Mark all SMS replies as read
+   */
+  async markAllRepliesAsRead(): Promise<{ success: boolean; error: any }> {
+    const { error } = await supabase
+      .from('sms_replies')
+      .update({ read: true })
+      .eq('read', false);
     
     return { success: !error, error };
   },

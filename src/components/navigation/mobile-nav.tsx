@@ -1,14 +1,16 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Link from 'next/link';
+import { smsService } from '@/services/sms-service';
 
 // Navigation item interface
 interface NavItem {
   name: string;
   href: string;
   icon: (props: React.SVGProps<SVGSVGElement>) => JSX.Element;
+  badge?: number;
 }
 
 // Navigation items
@@ -56,6 +58,20 @@ const navigation: NavItem[] = [
     ),
   },
   {
+    name: 'Messages',
+    href: '/messages',
+    icon: (props) => (
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"
+        />
+      </svg>
+    ),
+  },
+  {
     name: 'Profile',
     href: '/profile',
     icon: (props) => (
@@ -73,11 +89,34 @@ const navigation: NavItem[] = [
 
 export function MobileNav() {
   const pathname = usePathname();
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // Fetch unread message count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      const { count } = await smsService.countUnreadReplies();
+      setUnreadCount(count);
+    };
+
+    fetchUnreadCount();
+
+    // Refresh count every 30 seconds
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Apply unread count to the Messages navigation item
+  const navigationWithBadges = navigation.map(item => {
+    if (item.name === 'Messages') {
+      return { ...item, badge: unreadCount };
+    }
+    return item;
+  });
 
   return (
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
       <div className="flex justify-around">
-        {navigation.map((item) => {
+        {navigationWithBadges.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
@@ -89,10 +128,17 @@ export function MobileNav() {
                   : 'text-gray-500 hover:text-gray-700'
               }`}
             >
-              <item.icon
-                className={`h-6 w-6 ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
-                aria-hidden="true"
-              />
+              <div className="relative">
+                <item.icon
+                  className={`h-6 w-6 ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
+                  aria-hidden="true"
+                />
+                {item.badge ? (
+                  <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-4 w-4 text-xs font-bold rounded-full bg-red-500 text-white">
+                    {item.badge > 9 ? '9+' : item.badge}
+                  </span>
+                ) : null}
+              </div>
               <span className="mt-1">{item.name}</span>
             </Link>
           );
