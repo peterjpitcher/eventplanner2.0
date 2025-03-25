@@ -151,4 +151,39 @@ This document captures key decisions made during the development of the Event Ma
 ### Responsive Design
 - **Decision**: Implemented responsive layouts with device-specific components using Tailwind CSS
 - **Reasoning**: This ensures the application is usable across all device sizes while providing optimized experiences for each form factor.
-- **Date**: 2024-05-03 
+- **Date**: 2024-05-03
+
+## Phase 3 Implementation Decisions
+
+### Customer Service Layer
+- **Decision**: Created a dedicated service layer for customer operations
+- **Reasoning**: This separates data access logic from UI components, making the code more maintainable and testable. It also centralizes all Supabase operations related to customers.
+- **Date**: 2024-05-05
+
+### Mobile Number Validation
+- **Decision**: Implemented client-side validation for UK mobile numbers
+- **Reasoning**: Early validation improves user experience by providing immediate feedback and reduces the chance of invalid data being sent to the server. This also aligns with the database-level validation already defined in Supabase.
+- **Alternatives Considered**: Server-side validation only, third-party validation libraries
+- **Date**: 2024-05-05
+
+### Customer Form Reusability
+- **Decision**: Created a single reusable form component for both creating and editing customers
+- **Reasoning**: This reduces code duplication and ensures consistency in validation and user experience across create and edit operations.
+- **Alternatives Considered**: Separate components for create and edit forms
+- **Date**: 2024-05-05
+
+### Customer Search Implementation
+- **Decision**: Implemented search using Supabase's ilike operators for text matching
+- **Reasoning**: This provides a flexible and efficient search capability without requiring additional libraries, leveraging Supabase's built-in functionality.
+- **Alternatives Considered**: Client-side filtering, full-text search engines
+- **Date**: 2024-05-05
+
+### Error Handling
+- **Decision**: Implemented comprehensive error handling with user-friendly messages
+- **Reasoning**: Clear error messages improve the user experience by providing actionable information when something goes wrong.
+- **Date**: 2024-05-05
+
+### Optimistic UI Updates
+- **Decision**: Implemented immediate UI updates followed by server confirmation for delete operations
+- **Reasoning**: This provides a more responsive user experience by showing the result of actions immediately, while still ensuring data consistency.
+- **Date**: 2024-05-05 
