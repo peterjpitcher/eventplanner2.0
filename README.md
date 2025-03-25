@@ -84,13 +84,15 @@ Comprehensive documentation is available in the `docs/` directory:
 - [Testing Strategies](docs/TESTING.md)
 - [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
 - [Project Decisions](docs/DECISIONS.md)
+- [Authentication Flow](docs/AUTHENTICATION.md)
+- [Navigation Components](docs/NAVIGATION.md)
 
 ## Implementation Progress
 
 The implementation is being carried out in phases:
 
 - ✅ Phase 1: Project Setup
-- ⏳ Phase 2: Authentication & Navigation
+- ✅ Phase 2: Authentication & Navigation
 - ⏳ Phase 3: Customer Management - Basic
 - ⏳ Phase 4-17: Subsequent phases
 
