@@ -48,7 +48,25 @@ This document captures key decisions made during the development of the Event Ma
 - **Decision**: Use Supabase authentication with email/password
 - **Reasoning**: Supabase provides a secure, easy to implement authentication system that integrates directly with the database.
 - **Alternatives Considered**: NextAuth.js, Firebase Authentication
-- **Date**: [Implementation Phase 2]
+- **Date**: 2024-05-03
+
+### Authentication Context
+- **Decision**: Implement a React context for auth state management
+- **Reasoning**: A React context allows us to share authentication state across components without prop drilling, providing a clean way to manage user sessions.
+- **Alternatives Considered**: Redux, Zustand, global state variables
+- **Date**: 2024-05-03
+
+### Route Protection
+- **Decision**: Use a client-side route protection approach in layout components
+- **Reasoning**: Client-side route protection allows for a better user experience with loading states and provides flexibility in handling authentication redirects.
+- **Alternatives Considered**: Middleware-based protection, server-side route guards
+- **Date**: 2024-05-03
+
+### Navigation Structure
+- **Decision**: Implement separate navigation components for desktop and mobile
+- **Reasoning**: Different navigation patterns work better on different screen sizes - a sidebar for desktop provides more space and accessibility, while a bottom navigation bar is more thumb-friendly on mobile devices.
+- **Alternatives Considered**: Responsive hamburger menu for all screen sizes, top navigation bar
+- **Date**: 2024-05-03
 
 ### Mobile Experience
 - **Decision**: Use responsive design with mobile-specific navigation components
@@ -101,4 +119,36 @@ This document captures key decisions made during the development of the Event Ma
 ### Git Configuration
 - **Decision**: Created a comprehensive .gitignore file and GitHub PR template
 - **Reasoning**: The .gitignore prevents unnecessary files from being committed, while the PR template standardizes contribution information and review processes.
-- **Date**: 2024-05-01 
+- **Date**: 2024-05-01
+
+## Phase 2 Implementation Decisions
+
+### Authentication Flow
+- **Decision**: Used React context pattern for auth state management
+- **Reasoning**: This provides a clean pattern for making authentication state available throughout the application without prop drilling.
+- **Date**: 2024-05-03
+
+### Form Components
+- **Decision**: Created reusable UI components for forms (Button, Input)
+- **Reasoning**: Reusable components ensure consistency across the UI and reduce duplication of styling and validation logic.
+- **Date**: 2024-05-03
+
+### Route Groups
+- **Decision**: Used Next.js route groups with a dashboard layout
+- **Reasoning**: Route groups allow us to share layouts across related routes while keeping the URL structure clean.
+- **Date**: 2024-05-03
+
+### Navigation Structure
+- **Decision**: Created a sidebar for desktop and bottom navigation for mobile
+- **Reasoning**: This approach optimizes the UI for each device type, providing familiar navigation patterns that work well for the respective screen sizes.
+- **Date**: 2024-05-03
+
+### Authentication Protection
+- **Decision**: Used client-side route protection with redirection
+- **Reasoning**: Client-side protection allows for a better user experience, including loading states, and provides flexibility in handling the authentication flow.
+- **Date**: 2024-05-03
+
+### Responsive Design
+- **Decision**: Implemented responsive layouts with device-specific components using Tailwind CSS
+- **Reasoning**: This ensures the application is usable across all device sizes while providing optimized experiences for each form factor.
+- **Date**: 2024-05-03 
