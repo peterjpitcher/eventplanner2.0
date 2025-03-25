@@ -21,6 +21,7 @@ This document outlines the phased implementation approach for the Event Manageme
 15. [Mobile Optimization](#phase-15-mobile-optimization) (Week 10)
 16. [Testing & Refinement](#phase-16-testing--refinement) (Week 10-11)
 17. [Final Deployment](#phase-17-final-deployment) (Week 12)
+18. [UI Improvements](#phase-18-ui-improvements) (Week 11-12)
 
 ## Detailed Phase Plans
 
@@ -464,6 +465,31 @@ This document outlines the phased implementation approach for the Event Manageme
 - Updated documentation: Final deployment
 
 **Time Estimate**: 3 days
+
+### Phase 18: UI Improvements
+
+**Objective**: Improve UI to match simplified database schema and PRD requirements.
+
+**Tasks**:
+1. Remove unused fields from event forms (end_time, duration, price, location)
+2. Update event detail views to match simplified schema
+3. Ensure all UI components properly display event data
+4. Clean up any unused code related to removed fields
+
+**Deliverables**:
+- Simplified event forms matching PRD requirements
+- Updated event views
+- Removed unused fields and related code
+- Updated documentation
+
+**Time Estimate**: 2 days
+
+**Status**: Backlog ⬜
+
+**Implementation Notes**:
+- This phase addresses technical debt introduced during development
+- The goal is to simplify the UI to match the PRD requirements
+- Focus on removing unused fields and simplifying the user experience
 
 ## Development Process for Each Phase
 

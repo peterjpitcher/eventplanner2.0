@@ -136,11 +136,15 @@ An intuitive web application to efficiently manage pub events, customer registra
 **events**
 - id (UUID, PK)
 - name (TEXT)
+- description (TEXT, optional)
 - category_id (UUID, FK to event_categories)
 - capacity (INTEGER)
 - start_time (TIMESTAMP)
 - notes (TEXT)
+- is_published (BOOLEAN, default TRUE)
+- is_canceled (BOOLEAN, default FALSE)
 - created_at (TIMESTAMP)
+- updated_at (TIMESTAMP)
 
 **bookings**
 - id (UUID, PK)
