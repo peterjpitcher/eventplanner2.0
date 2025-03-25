@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ClientOnly from '@/components/client-only';
 
 export function RegisterForm() {
   // States
@@ -69,67 +70,107 @@ export function RegisterForm() {
         </div>
       )}
       
-      <form 
-        onSubmit={(e) => {
-          // Get redirectTo from URL search params on the client side
-          const params = new URLSearchParams(window.location.search);
-          const redirectTo = params.get('redirectTo') || '/auth/login';
-          handleSubmit(e, redirectTo);
-        }} 
-        className="space-y-4"
-      >
-        <Input
-          label="Name"
-          type="text"
-          id="name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="John Doe"
-          required
-        />
-        
-        <Input
-          label="Email"
-          type="email"
-          id="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="your.email@example.com"
-          autoComplete="email"
-          required
-        />
-        
-        <Input
-          label="Password"
-          type="password"
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          autoComplete="new-password"
-          required
-        />
-        
-        <Input
-          label="Confirm Password"
-          type="password"
-          id="confirmPassword"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          placeholder="••••••••"
-          autoComplete="new-password"
-          required
-        />
-        
-        <Button
-          type="submit"
-          fullWidth
-          isLoading={isLoading}
-          disabled={isLoading}
+      <ClientOnly fallback={
+        <form className="space-y-4">
+          <Input
+            label="Name"
+            type="text"
+            id="name-loading"
+            placeholder="Loading..."
+            disabled
+          />
+          <Input
+            label="Email"
+            type="email"
+            id="email-loading"
+            placeholder="Loading..."
+            disabled
+          />
+          <Input
+            label="Password"
+            type="password"
+            id="password-loading"
+            placeholder="Loading..."
+            disabled
+          />
+          <Input
+            label="Confirm Password"
+            type="password"
+            id="confirm-password-loading"
+            placeholder="Loading..."
+            disabled
+          />
+          <Button
+            type="button"
+            fullWidth
+            disabled
+          >
+            Register
+          </Button>
+        </form>
+      }>
+        <form 
+          onSubmit={(e) => {
+            // Get redirectTo from URL search params on the client side
+            const params = new URLSearchParams(window.location.search);
+            const redirectTo = params.get('redirectTo') || '/auth/login';
+            handleSubmit(e, redirectTo);
+          }} 
+          className="space-y-4"
         >
-          Register
-        </Button>
-      </form>
+          <Input
+            label="Name"
+            type="text"
+            id="name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="John Doe"
+            required
+          />
+          
+          <Input
+            label="Email"
+            type="email"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your.email@example.com"
+            autoComplete="email"
+            required
+          />
+          
+          <Input
+            label="Password"
+            type="password"
+            id="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="new-password"
+            required
+          />
+          
+          <Input
+            label="Confirm Password"
+            type="password"
+            id="confirmPassword"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="new-password"
+            required
+          />
+          
+          <Button
+            type="submit"
+            fullWidth
+            isLoading={isLoading}
+            disabled={isLoading}
+          >
+            Register
+          </Button>
+        </form>
+      </ClientOnly>
       
       <div className="mt-6 text-center text-sm">
         <span className="text-gray-600">Already have an account?</span>{' '}

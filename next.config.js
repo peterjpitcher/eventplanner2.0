@@ -5,7 +5,7 @@ const nextConfig = {
   swcMinify: true,
   experimental: {
     // Enable optimizations for client components
-    missingSuspenseWithCSRErrorEnabled: false,
+    missingSuspenseWithCSRErrorEnabled: true,
     // Enable server actions (if needed in the app)
     serverActions: true
   }

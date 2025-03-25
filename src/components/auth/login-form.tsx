@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import ClientOnly from '@/components/client-only';
 
-// This component doesn't use useSearchParams anymore
+// This component doesn't use useSearchParams directly, but uses window.location
 export function LoginForm() {
   // States
   const [email, setEmail] = useState('');
@@ -51,54 +52,80 @@ export function LoginForm() {
         </div>
       )}
       
-      <form 
-        onSubmit={(e) => {
-          // Get redirectTo from URL search params on the client side
-          const params = new URLSearchParams(window.location.search);
-          const redirectTo = params.get('redirectTo') || '/dashboard';
-          handleSubmit(e, redirectTo);
-        }} 
-        className="space-y-4"
-      >
-        <Input
-          label="Email"
-          type="email"
-          id="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="your.email@example.com"
-          autoComplete="email"
-          required
-        />
-        
-        <Input
-          label="Password"
-          type="password"
-          id="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          autoComplete="current-password"
-          required
-        />
-        
-        <div className="flex items-center justify-between">
-          <div className="text-sm">
-            <a href="#" className="text-blue-600 hover:text-blue-500">
-              Forgot your password?
-            </a>
-          </div>
-        </div>
-        
-        <Button
-          type="submit"
-          fullWidth
-          isLoading={isLoading}
-          disabled={isLoading}
+      <ClientOnly fallback={
+        <form className="space-y-4">
+          <Input
+            label="Email"
+            type="email"
+            id="email-loading"
+            placeholder="Loading..."
+            disabled
+          />
+          <Input
+            label="Password"
+            type="password"
+            id="password-loading"
+            placeholder="Loading..."
+            disabled
+          />
+          <Button
+            type="button"
+            fullWidth
+            disabled
+          >
+            Log in
+          </Button>
+        </form>
+      }>
+        <form 
+          onSubmit={(e) => {
+            // Get redirectTo from URL search params on the client side
+            const params = new URLSearchParams(window.location.search);
+            const redirectTo = params.get('redirectTo') || '/dashboard';
+            handleSubmit(e, redirectTo);
+          }} 
+          className="space-y-4"
         >
-          Log in
-        </Button>
-      </form>
+          <Input
+            label="Email"
+            type="email"
+            id="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="your.email@example.com"
+            autoComplete="email"
+            required
+          />
+          
+          <Input
+            label="Password"
+            type="password"
+            id="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            autoComplete="current-password"
+            required
+          />
+          
+          <div className="flex items-center justify-between">
+            <div className="text-sm">
+              <a href="#" className="text-blue-600 hover:text-blue-500">
+                Forgot your password?
+              </a>
+            </div>
+          </div>
+          
+          <Button
+            type="submit"
+            fullWidth
+            isLoading={isLoading}
+            disabled={isLoading}
+          >
+            Log in
+          </Button>
+        </form>
+      </ClientOnly>
       
       <div className="mt-6 text-center text-sm">
         <span className="text-gray-600">Don&apos;t have an account?</span>{' '}
