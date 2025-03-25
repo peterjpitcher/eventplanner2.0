@@ -3,9 +3,10 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  images: {
-    domains: ['your-supabase-domain.supabase.co'],
-  },
+  experimental: {
+    // Enable server actions (if needed in the app)
+    serverActions: true
+  }
 };
 
 module.exports = nextConfig; 
