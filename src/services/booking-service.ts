@@ -4,6 +4,7 @@ import { Event } from './event-service';
 import { smsService } from './sms-service';
 import { customerService } from './customer-service';
 import { eventService } from './event-service';
+import { format } from 'date-fns';
 
 export interface Booking {
   id: string;
@@ -91,6 +92,41 @@ export const bookingService = {
   },
 
   /**
+   * Format a date object for SMS messages
+   */
+  formatSMSDateTime(startTime: string) {
+    const eventDate = new Date(startTime);
+    return {
+      formattedDate: format(eventDate, 'dd/MM/yyyy'),
+      formattedTime: format(eventDate, 'HH:mm')
+    };
+  },
+
+  /**
+   * Send booking confirmation SMS
+   */
+  async sendConfirmationSMS(booking: Booking, customer: Customer, event: Event): Promise<{ success: boolean; error?: any }> {
+    try {
+      const { formattedDate, formattedTime } = this.formatSMSDateTime(event.start_time);
+      
+      const smsResult = await smsService.sendBookingConfirmation({
+        customerId: customer.id,
+        bookingId: booking.id,
+        eventName: event.title,
+        eventDate: formattedDate,
+        eventTime: formattedTime,
+        seats: booking.seats_or_reminder,
+        customerName: customer.first_name
+      });
+      
+      return { success: smsResult.success, error: smsResult.error };
+    } catch (error) {
+      console.error('Error sending booking confirmation SMS:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
    * Create a new booking
    */
   async createBooking(booking: BookingFormData): Promise<{ data: Booking | null; error: any; smsSent?: boolean }> {
@@ -124,7 +160,7 @@ export const bookingService = {
           
           if (customer && event) {
             // Send SMS and wait for the result
-            const smsResult = await smsService.sendBookingConfirmation(data, customer, event);
+            const smsResult = await this.sendConfirmationSMS(data, customer, event);
             smsSent = smsResult.success;
             
             if (!smsResult.success) {
@@ -165,13 +201,61 @@ export const bookingService = {
   /**
    * Delete a booking
    */
-  async deleteBooking(id: string): Promise<{ error: any }> {
-    const { error } = await supabase
-      .from('bookings')
-      .delete()
-      .eq('id', id);
-    
-    return { error };
+  async deleteBooking(id: string, sendSMS: boolean = false): Promise<{ error: any; smsSent?: boolean }> {
+    try {
+      // First, get the booking details if we need to send an SMS
+      let bookingDetails = null;
+      let smsSent = false;
+      
+      if (sendSMS) {
+        const { data, error: fetchError } = await this.getBookingById(id);
+        if (fetchError) {
+          console.error('Error fetching booking for SMS notification:', fetchError);
+          return { error: fetchError };
+        }
+        bookingDetails = data;
+      }
+      
+      // Delete the booking
+      const { error } = await supabase
+        .from('bookings')
+        .delete()
+        .eq('id', id);
+      
+      if (error) {
+        return { error };
+      }
+      
+      // Send SMS notification if requested and booking details were found
+      if (sendSMS && bookingDetails && bookingDetails.customer && bookingDetails.event) {
+        try {
+          const { customer, event } = bookingDetails;
+          const { formattedDate, formattedTime } = this.formatSMSDateTime(event.start_time);
+          
+          const smsResult = await smsService.sendBookingCancellation({
+            customerId: customer.id,
+            bookingId: id,
+            eventName: event.title,
+            eventDate: formattedDate,
+            eventTime: formattedTime,
+            customerName: customer.first_name
+          });
+          
+          smsSent = smsResult.success;
+          if (!smsResult.success) {
+            console.error('Error sending booking cancellation SMS:', smsResult.error);
+          }
+        } catch (smsError) {
+          console.error('Error processing SMS for booking cancellation:', smsError);
+          // Continue with booking deletion even if SMS fails
+        }
+      }
+      
+      return { error: null, smsSent };
+    } catch (err) {
+      console.error('Unexpected error deleting booking:', err);
+      return { error: err };
+    }
   }
 };
 

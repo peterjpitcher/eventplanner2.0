@@ -91,7 +91,24 @@ A component that provides a streamlined interface for creating bookings from the
 1. Navigate to an event's details page
 2. Find the booking in the list
 3. Click "Delete"
-4. Confirm deletion in the confirmation dialog
+4. In the confirmation dialog, choose whether to send a cancellation SMS
+5. Click "Delete Booking" to confirm cancellation
+
+## SMS Notifications
+
+The booking management system can send the following SMS notifications:
+
+### Booking Confirmation
+When a booking is created, a confirmation SMS is automatically sent to the customer with details about their booking.
+
+### Booking Cancellation
+When a booking is deleted, staff can choose to send a cancellation SMS to the customer. This is controlled through a checkbox in the cancellation confirmation dialog.
+
+The cancellation SMS includes:
+- Customer name
+- Event name
+- Event date and time
+- Contact information
 
 ## Future Enhancements (Phase 7+)
 

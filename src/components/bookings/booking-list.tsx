@@ -1,9 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Booking, bookingService } from '@/services/booking-service';
 import { Customer } from '@/types';
 import Link from 'next/link';
+import { toast } from 'sonner';
 
 interface BookingListProps {
   eventId: string;
@@ -12,7 +13,12 @@ interface BookingListProps {
 export function BookingList({ eventId }: BookingListProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [bookingToDelete, setBookingToDelete] = useState<string | null>(null);
+  const [sendSMS, setSendSMS] = useState(true);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const fetchBookings = async () => {
@@ -33,19 +39,65 @@ export function BookingList({ eventId }: BookingListProps) {
     fetchBookings();
   }, [eventId]);
 
-  const handleDeleteBooking = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this booking?')) {
-      const { error } = await bookingService.deleteBooking(id);
+  const openDeleteConfirm = (id: string) => {
+    setBookingToDelete(id);
+    setShowConfirmDialog(true);
+    setSendSMS(true);
+  };
+
+  const closeDeleteConfirm = () => {
+    setShowConfirmDialog(false);
+    setBookingToDelete(null);
+  };
+
+  const handleDeleteBooking = async () => {
+    if (!bookingToDelete) return;
+    
+    try {
+      setIsDeleting(true);
+      const { error, smsSent } = await bookingService.deleteBooking(bookingToDelete, sendSMS);
       
       if (error) {
         console.error('Error deleting booking:', error);
-        alert('Failed to delete booking. Please try again.');
+        toast.error('Failed to delete booking. Please try again.');
       } else {
         // Remove the deleted booking from state
-        setBookings(bookings.filter(booking => booking.id !== id));
+        setBookings(bookings.filter(booking => booking.id !== bookingToDelete));
+        
+        if (sendSMS) {
+          if (smsSent) {
+            toast.success('Booking deleted and cancellation SMS sent');
+          } else {
+            toast.success('Booking deleted but SMS could not be sent');
+          }
+        } else {
+          toast.success('Booking deleted successfully');
+        }
       }
+    } catch (err) {
+      console.error('Unexpected error deleting booking:', err);
+      toast.error('An unexpected error occurred');
+    } finally {
+      setIsDeleting(false);
+      closeDeleteConfirm();
     }
   };
+
+  // Close dialog when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dialogRef.current && !dialogRef.current.contains(event.target as Node)) {
+        closeDeleteConfirm();
+      }
+    };
+
+    if (showConfirmDialog) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showConfirmDialog]);
 
   if (isLoading) {
     return <div className="text-center p-4">Loading bookings...</div>;
@@ -101,7 +153,7 @@ export function BookingList({ eventId }: BookingListProps) {
                     Edit
                   </Link>
                   <button
-                    onClick={() => handleDeleteBooking(booking.id)}
+                    onClick={() => openDeleteConfirm(booking.id)}
                     className="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm leading-5 font-medium rounded-md text-red-700 bg-white hover:text-red-500 focus:outline-none focus:border-red-300 focus:shadow-outline-red active:text-red-800 active:bg-gray-50 transition ease-in-out duration-150"
                   >
                     Delete
@@ -112,6 +164,45 @@ export function BookingList({ eventId }: BookingListProps) {
           ))}
         </ul>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center">
+          <div ref={dialogRef} className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-medium mb-4">Confirm Booking Cancellation</h3>
+            <p className="mb-6">Are you sure you want to cancel this booking?</p>
+            
+            <div className="mb-6">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={sendSMS}
+                  onChange={(e) => setSendSMS(e.target.checked)}
+                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                />
+                <span>Send cancellation SMS to customer</span>
+              </label>
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={closeDeleteConfirm}
+                className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                disabled={isDeleting}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteBooking}
+                className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                disabled={isDeleting}
+              >
+                {isDeleting ? 'Deleting...' : 'Delete Booking'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

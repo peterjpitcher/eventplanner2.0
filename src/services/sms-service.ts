@@ -369,6 +369,237 @@ export const smsService = {
       console.error(`Error sending ${reminderType} reminder:`, error);
       return { success: false, error };
     }
+  },
+
+  /**
+   * Send a booking cancellation SMS
+   */
+  async sendBookingCancellation({
+    customerId,
+    bookingId,
+    eventName,
+    eventDate,
+    eventTime,
+    customerName
+  }: {
+    customerId: string;
+    bookingId: string;
+    eventName: string;
+    eventDate: string;
+    eventTime: string;
+    customerName: string;
+  }): Promise<{ success: boolean; error?: any }> {
+    try {
+      // Get the customer
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customerId)
+        .single();
+      
+      if (customerError || !customer) {
+        return { success: false, error: customerError || 'Customer not found' };
+      }
+
+      // Load the template
+      const templatePath = '/templates/booking_cancellation.txt';
+      const response = await fetch(templatePath);
+      if (!response.ok) {
+        return { success: false, error: `Failed to load template: ${response.statusText}` };
+      }
+      
+      const template = await response.text();
+      
+      // Process the template with variables
+      const messageContent = processTemplate(template, {
+        customer_name: customerName,
+        event_name: eventName,
+        event_date: eventDate,
+        event_time: eventTime
+      });
+
+      // Send the SMS
+      return await this.sendSMSToCustomer({
+        customer,
+        messageType: 'booking_cancellation',
+        messageContent,
+        bookingId
+      });
+    } catch (error) {
+      console.error('Error sending booking cancellation:', error);
+      return { success: false, error };
+    }
+  },
+
+  /**
+   * Send event cancellation SMS to a customer
+   */
+  async sendEventCancellation({
+    customerId,
+    bookingId,
+    eventName,
+    eventDate,
+    eventTime,
+    customerName,
+    customMessage = ''
+  }: {
+    customerId: string;
+    bookingId: string;
+    eventName: string;
+    eventDate: string;
+    eventTime: string;
+    customerName: string;
+    customMessage?: string;
+  }): Promise<{ success: boolean; error?: any }> {
+    try {
+      // Get the customer
+      const { data: customer, error: customerError } = await supabase
+        .from('customers')
+        .select('*')
+        .eq('id', customerId)
+        .single();
+      
+      if (customerError || !customer) {
+        return { success: false, error: customerError || 'Customer not found' };
+      }
+
+      // Load the template
+      const templatePath = '/templates/event_cancellation.txt';
+      const response = await fetch(templatePath);
+      if (!response.ok) {
+        return { success: false, error: `Failed to load template: ${response.statusText}` };
+      }
+      
+      const template = await response.text();
+      
+      // Process the template with variables
+      const messageContent = processTemplate(template, {
+        customer_name: customerName,
+        event_name: eventName,
+        event_date: eventDate,
+        event_time: eventTime,
+        custom_message: customMessage ? `${customMessage} ` : '' // Add space after custom message if it exists
+      });
+
+      // Send the SMS
+      return await this.sendSMSToCustomer({
+        customer,
+        messageType: 'event_cancellation',
+        messageContent,
+        bookingId
+      });
+    } catch (error) {
+      console.error('Error sending event cancellation SMS:', error);
+      return { success: false, error };
+    }
+  },
+  
+  /**
+   * Send event cancellation notifications to all bookings of an event
+   */
+  async sendEventCancellationToAllBookings({
+    eventId,
+    eventName,
+    eventDate,
+    eventTime,
+    customMessage = ''
+  }: {
+    eventId: string;
+    eventName: string;
+    eventDate: string;
+    eventTime: string;
+    customMessage?: string;
+  }): Promise<{ 
+    success: boolean; 
+    messagesSent: number;
+    messagesFailed: number;
+    totalBookings: number;
+    error?: any 
+  }> {
+    try {
+      // Get all bookings for this event
+      const { data: bookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          customer:customer_id (*)
+        `)
+        .eq('event_id', eventId);
+      
+      if (bookingsError) {
+        return { 
+          success: false, 
+          messagesSent: 0,
+          messagesFailed: 0,
+          totalBookings: 0,
+          error: bookingsError 
+        };
+      }
+      
+      if (!bookings || bookings.length === 0) {
+        return { 
+          success: true, 
+          messagesSent: 0,
+          messagesFailed: 0,
+          totalBookings: 0
+        };
+      }
+      
+      // Track success and failures
+      let messagesSent = 0;
+      let messagesFailed = 0;
+      
+      // Send SMS to each booking
+      for (const booking of bookings) {
+        try {
+          // Cast to any to avoid type issues
+          const bookingData = booking as any;
+          const customerId = bookingData?.customer?.id;
+          const customerName = bookingData?.customer?.first_name;
+          
+          if (bookingData?.id && customerId && customerName) {
+            const result = await this.sendEventCancellation({
+              customerId,
+              bookingId: bookingData.id,
+              eventName,
+              eventDate,
+              eventTime,
+              customerName,
+              customMessage
+            });
+            
+            if (result.success) {
+              messagesSent++;
+            } else {
+              messagesFailed++;
+              console.error(`Failed to send cancellation SMS for booking ${bookingData.id}:`, result.error);
+            }
+          } else {
+            messagesFailed++;
+            console.error(`Booking ${bookingData?.id || 'unknown'} has invalid customer information`);
+          }
+        } catch (err) {
+          messagesFailed++;
+          console.error('Error processing booking for SMS:', err);
+        }
+      }
+      
+      return {
+        success: messagesSent > 0,
+        messagesSent,
+        messagesFailed,
+        totalBookings: bookings.length
+      };
+    } catch (error) {
+      console.error('Error sending event cancellation to all bookings:', error);
+      return { 
+        success: false, 
+        messagesSent: 0,
+        messagesFailed: 0,
+        totalBookings: 0,
+        error 
+      };
+    }
   }
 };
 

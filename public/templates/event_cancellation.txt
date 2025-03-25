@@ -1,0 +1,1 @@
+Important notice: {{event_name}} on {{event_date}} at {{event_time}} has been cancelled. We apologise for any inconvenience caused. {{custom_message}} The Anchor. 

@@ -44,6 +44,11 @@ export default async function EventDetailsPage({ params }: { params: { id: strin
           <Link href={`/events/${event.id}/edit`} passHref>
             <Button variant="outline">Edit Event</Button>
           </Link>
+          {!event.is_canceled && (
+            <Link href={`/events/${event.id}/edit?action=cancel`} passHref>
+              <Button variant="danger">Cancel Event</Button>
+            </Link>
+          )}
           <Link href="/events" passHref>
             <Button variant="secondary">Back to Events</Button>
           </Link>

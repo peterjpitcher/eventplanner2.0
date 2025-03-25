@@ -206,6 +206,42 @@ This phase focused on implementing automated SMS reminders:
 - Added documentation for the reminder system configuration
 - Improved booking detail view to show SMS status
 
+### Phase 10: Booking Cancellations ✅
+
+This phase focused on implementing booking cancellation with optional SMS notifications:
+
+- Added a booking cancellation template with appropriate message format
+- Implemented a sendBookingCancellation method in the SMS service
+- Enhanced the booking service to support optional SMS notifications on deletion
+- Created a confirmation dialog with an SMS option toggle in the UI
+- Improved error handling and user feedback with toast notifications
+- Added standardized date formatting helpers for consistent SMS messages
+- Implemented UX improvements with loading states during cancellation
+
+## Booking Cancellation Workflow
+
+The booking cancellation workflow provides staff with flexibility in how they handle cancellations:
+
+1. Staff clicks the "Delete" button for a booking
+2. A confirmation dialog appears with an SMS notification checkbox (checked by default)
+3. Staff can choose whether to send a cancellation SMS
+4. If SMS is enabled, the system:
+   a. Deletes the booking from the database
+   b. Retrieves customer and event details
+   c. Sends a cancellation SMS using the booking_cancellation template
+   d. Records the SMS in the database
+   e. Provides feedback on whether the SMS was successfully sent
+5. If SMS is disabled, the system simply deletes the booking
+6. The UI updates to reflect the deleted booking
+7. A toast notification confirms the action's result
+
+## Cancellation SMS Template
+
+The cancellation SMS uses the following template:
+```
+Hi {{customer_name}}, your booking for {{event_name}} on {{event_date}} at {{event_time}} has been cancelled. If this was not requested by you or if you have any questions, please contact us. The Anchor.
+```
+
 ## Reminder System Configuration
 
 The reminder system is designed to send two types of SMS reminders:

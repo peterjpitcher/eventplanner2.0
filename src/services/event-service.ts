@@ -1,5 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { EventCategory } from './event-category-service';
+import { smsService } from './sms-service';
+import { format } from 'date-fns';
 
 export interface Event {
   id: string;
@@ -168,7 +170,17 @@ export const eventService = {
   /**
    * Cancel an event (mark as canceled rather than deleting)
    */
-  async cancelEvent(id: string): Promise<{ data: Event | null; error: any }> {
+  async cancelEvent(id: string, sendSMS: boolean = false, customMessage: string = ''): Promise<{ 
+    data: Event | null; 
+    error: any;
+    smsResults?: {
+      success: boolean;
+      messagesSent: number;
+      messagesFailed: number;
+      totalBookings: number;
+    } 
+  }> {
+    // First update the event in the database
     const { data, error } = await supabase
       .from('events')
       .update({ is_canceled: true })
@@ -179,8 +191,40 @@ export const eventService = {
       return { data: null, error };
     }
     
-    // Fetch the updated event in the view format
-    return this.getEventById(id);
+    // Fetch the updated event details
+    const { data: event, error: eventError } = await this.getEventById(id);
+    
+    if (eventError || !event) {
+      return { data: null, error: eventError };
+    }
+    
+    // Send SMS notifications if requested
+    let smsResults = undefined;
+    
+    if (sendSMS && process.env.SMS_ENABLED === 'true') {
+      try {
+        // Format dates
+        const eventDate = format(new Date(event.start_time), 'dd/MM/yyyy');
+        const eventTime = format(new Date(event.start_time), 'HH:mm');
+        
+        // Send SMS notifications to all affected bookings
+        smsResults = await smsService.sendEventCancellationToAllBookings({
+          eventId: id,
+          eventName: event.title,
+          eventDate,
+          eventTime,
+          customMessage
+        });
+      } catch (smsError) {
+        console.error('Error sending SMS notifications for event cancellation:', smsError);
+      }
+    }
+    
+    return { 
+      data: event, 
+      error: null,
+      smsResults
+    };
   },
 
   /**

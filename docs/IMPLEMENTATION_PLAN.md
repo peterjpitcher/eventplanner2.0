@@ -14,7 +14,7 @@ This document outlines the phased implementation approach for the Event Manageme
 8. [Booking Confirmations](#phase-8-booking-confirmations) (Week 5)
 9. [SMS Reminders](#phase-9-sms-reminders) (Week 6)
 10. [Booking Cancellations](#phase-10-booking-cancellations) (Week 6-7)
-11. [Event Cancellations](#phase-11-event-cancellations) (Week 7)
+11. [Event Cancellations with SMS Notifications](#phase-11-event-cancellations-with-sms-notifications) (Week 7)
 12. [SMS Reply Handling](#phase-12-sms-reply-handling) (Week 8)
 13. [Customer Management - Advanced](#phase-13-customer-management---advanced) (Week 8-9)
 14. [Dashboard & Reporting](#phase-14-dashboard--reporting) (Week 9)
@@ -325,38 +325,62 @@ This document outlines the phased implementation approach for the Event Manageme
 **Objective**: Implement booking cancellation with SMS notifications.
 
 **Tasks**:
-1. Extend booking deletion to include confirmation dialog
-2. Add SMS sending option for cancellations
-3. Implement booking cancellation SMS template
-4. Store cancellation messages in SMS messages table
-5. Handle SMS delivery status updates
-6. Update booking list to refresh after cancellation
+1. ✅ Extend booking deletion to include confirmation dialog
+2. ✅ Add SMS sending option for cancellations
+3. ✅ Implement booking cancellation SMS template
+4. ✅ Store cancellation messages in SMS messages table
+5. ✅ Handle SMS delivery status updates
+6. ✅ Update booking list to refresh after cancellation
 
 **Deliverables**:
-- Booking cancellation with confirmation dialog
-- Optional SMS notification for cancellations
-- Updated documentation: Booking cancellations
+- ✅ Booking cancellation with confirmation dialog
+- ✅ Optional SMS notification for cancellations
+- ✅ Updated documentation: Booking cancellations
 
 **Time Estimate**: 3 days
 
-### Phase 11: Event Cancellations
+**Status**: Complete ✅
+
+**Implementation Notes**:
+- Created a booking_cancellation.txt template file with appropriate message format
+- Enhanced the SMS service with a sendBookingCancellation method to send cancellation notifications
+- Updated the booking service's deleteBooking method to support optional SMS notifications
+- Added a confirmation dialog to the booking list component with an SMS option toggle
+- Added better feedback with toast notifications for successful/failed operations
+- Improved error handling throughout the cancellation flow
+- Updated documentation to reflect the new cancellation workflow
+- Added helper methods in the booking service to standardize date formatting
+- Ensured appropriate UX with loading states during cancellation
+
+### Phase 11: Event Cancellations with SMS Notifications
 
 **Objective**: Implement event cancellation with SMS notifications to all bookings.
 
 **Tasks**:
-1. Extend event deletion to include confirmation dialog
-2. Add mass SMS sending for all affected bookings
-3. Implement event cancellation SMS template
-4. Store cancellation messages in SMS messages table
-5. Handle SMS delivery status updates
-6. Update booking status for cancelled events
+1. ✅ Extend event deletion to include confirmation dialog
+2. ✅ Add mass SMS sending for all affected bookings
+3. ✅ Implement event cancellation SMS template
+4. ✅ Store cancellation messages in SMS messages table
+5. ✅ Handle SMS delivery status updates
+6. ✅ Update event status for cancelled events
 
 **Deliverables**:
-- Event cancellation with confirmation dialog
-- Mass SMS notification for all affected bookings
-- Updated documentation: Event cancellations
+- ✅ Event cancellation with confirmation dialog
+- ✅ Mass SMS notification for all affected bookings
+- ✅ Updated documentation: Event cancellations
 
 **Time Estimate**: 3 days
+
+**Status**: Completed ✅
+
+**Implementation Notes**:
+- Enhanced the `cancelEvent` method in the event service to support SMS notifications
+- Added a custom message option to allow staff to provide additional context for cancellations
+- Implemented a cancel button on the event details page for quick access to cancellation
+- Created a confirmation dialog with SMS notification toggle in the edit event form
+- Added comprehensive feedback with toast notifications showing SMS success/failure counts
+- Reused existing SMS service architecture for bulk sending to all affected bookings
+- Updated decisions documentation to capture the implementation approach
 
 ### Phase 12: SMS Reply Handling
 
@@ -378,6 +402,8 @@ This document outlines the phased implementation approach for the Event Manageme
 - Updated documentation: SMS reply management
 
 **Time Estimate**: 4 days
+
+**Status**: In Progress 🔄
 
 ### Phase 13: Customer Management - Advanced
 

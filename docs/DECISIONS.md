@@ -407,3 +407,80 @@ This document captures key decisions made during the development of the Event Ma
    - **Reasoning**: Provides transparency about which reminders have been sent, are pending, or have failed
    - **Alternatives Considered**: SMS log without explicit reminder status tracking
    - **Date**: 2024-05-15
+
+## Booking Cancellation Implementation
+
+**Date**: 2024-05-09
+
+**Context**:
+As part of Phase 10, we needed to implement booking cancellation with optional SMS notifications. The system should allow users to cancel bookings and optionally send SMS notifications to customers informing them of the cancellation.
+
+**Options**:
+1. Simple confirmation with mandatory SMS - Always send SMS on booking cancellation
+2. Simple confirmation without SMS - Never send SMS on cancellation
+3. Confirmation dialog with SMS checkbox - Let the user decide whether to send an SMS
+
+**Decision**:
+We chose option 3 - Implementing a confirmation dialog with an SMS option toggle, giving the user control over whether to send a cancellation notification.
+
+**Reasons**:
+1. Maximum flexibility - Allows staff to decide on a case-by-case basis
+2. Accommodates different scenarios - Some cancellations may be initiated by customers themselves
+3. Reduces notification spam - Avoids unnecessary messages when not needed
+4. Transparent user experience - Makes it clear what actions will be taken
+
+**Implementation Details**:
+1. Added a `booking_cancellation.txt` template for SMS messages 
+2. Enhanced `deleteBooking` method in the booking service to accept a `sendSMS` parameter
+3. Implemented a modal confirmation dialog with an SMS toggle
+4. Added loading states during cancellation process
+5. Improved feedback with toast notifications for success/failure
+6. Implemented proper error handling
+
+**Status**: Completed
+
+## Phase 10: Booking Cancellations with SMS Notifications
+
+### Booking Cancellation Workflow
+- **Decision**: Implemented a cancellation workflow with SMS notifications
+- **Reasoning**: Providing SMS notifications for booking cancellations improves customer service and reduces confusion.
+- **Alternatives Considered**: Email-only notifications, no automated notifications
+- **Date**: 2024-05-25
+
+### SMS Template for Booking Cancellations
+- **Decision**: Created a specific SMS template for booking cancellations
+- **Reasoning**: Having a dedicated template ensures clear and consistent messaging for cancellations.
+- **Date**: 2024-05-25
+
+### Cancellation Status Tracking
+- **Decision**: Updated booking status to track cancellations separately from other states
+- **Reasoning**: This allows for better reporting and analytics on cancellation reasons and patterns.
+- **Date**: 2024-05-25
+
+## Phase 11: Event Cancellations with SMS Notifications
+
+### Event Cancellation Workflow
+- **Decision**: Enhanced the event cancellation process with SMS notification capabilities
+- **Reasoning**: When events are canceled, it's crucial to notify all affected customers promptly to reduce confusion and provide good customer service.
+- **Alternatives Considered**: Email-only notifications, manual notification process
+- **Date**: 2024-05-26
+
+### SMS Template for Event Cancellations
+- **Decision**: Created a specific SMS template for event cancellations
+- **Reasoning**: A dedicated template ensures appropriate messaging for event-wide cancellations versus individual booking cancellations.
+- **Date**: 2024-05-26
+
+### Bulk SMS Notification System
+- **Decision**: Implemented a system to send SMS notifications to all bookings for a canceled event
+- **Reasoning**: This ensures efficient notification of all affected customers with a single action, reducing manual work.
+- **Date**: 2024-05-26
+
+### Custom Message Support
+- **Decision**: Added support for optional custom messages in event cancellation notifications
+- **Reasoning**: This provides flexibility to add context-specific information about the cancellation or potential rescheduling.
+- **Date**: 2024-05-26
+
+### User Interface Enhancements
+- **Decision**: Added a Cancel Event button on the event details page and a confirmation dialog with SMS options
+- **Reasoning**: This provides a clear workflow for event cancellation and ensures staff consider whether to send notifications.
+- **Date**: 2024-05-26
