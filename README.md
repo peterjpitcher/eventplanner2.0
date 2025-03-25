@@ -1,31 +1,105 @@
-# Event Management System for Pub Events
+# Event Planner
 
-A web application to efficiently manage pub events, customer registrations, bookings, and automated SMS notifications.
+A comprehensive web application for managing pub events, customer registrations, bookings, and automated SMS notifications.
 
-## Overview
+## Features
 
-This system provides an intuitive interface for pub managers to organize events, manage customer registrations, and send automated SMS notifications. Built with React, Tailwind CSS, and Supabase, it offers a mobile-optimized experience with a focus on simplicity and efficiency.
-
-## Documentation
-
-- [Architecture](./docs/architecture/README.md) - System architecture and technical decisions
-- [Workflows](./docs/workflows/README.md) - Development workflows and processes
-- [Specifications](./docs/specifications/README.md) - Detailed requirements and specifications
-- [Setup](./docs/setup/README.md) - Installation and configuration guides
-- [API](./docs/api/README.md) - API documentation and usage
-- [Testing](./docs/testing/README.md) - Testing strategies and procedures
-- [User Guides](./docs/user-guides/README.md) - End-user documentation
-- [Implementation Plan](./docs/IMPLEMENTATION_PLAN.md) - Phased development approach and timeline
-- [Project Summary](./docs/PROJECT_SUMMARY.md) - Overview of the entire project
+- **Customer Management**: Register and manage customer details
+- **Event Categories**: Organise events into categories
+- **Event Management**: Create, edit and manage pub events
+- **Booking Management**: Handle customer bookings for events
+- **SMS Notifications**: Automated SMS reminders and confirmations
+- **SMS Reply Handling**: Process customer responses to SMS messages
+- **Dashboard & Reporting**: View insights and statistics
 
 ## Tech Stack
 
-- **Frontend**: React with Tailwind CSS
-- **Backend & Authentication**: Supabase
-- **SMS Service**: Twilio
-- **Deployment & Hosting**: Vercel
-- **Version Control**: GitHub
+- **Frontend**: Next.js 14 with App Router, TypeScript, and Tailwind CSS
+- **Backend**: Supabase (Authentication, PostgreSQL Database, Storage)
+- **Communication**: Twilio SMS API
+- **Deployment**: Vercel
 
 ## Getting Started
 
-Please refer to the [Setup Guide](./docs/setup/README.md) for detailed instructions on how to get the system up and running. 
+### Prerequisites
+
+- Node.js 18.17.0 or later
+- npm or yarn
+- Supabase account
+- Twilio account (for SMS features)
+
+### Installation
+
+1. Clone the repository:
+   ```bash
+   git clone <repository-url>
+   cd event-planner
+   ```
+
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up environment variables:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+   Then fill in the required values in `.env.local`
+
+4. Run the development server:
+   ```bash
+   npm run dev
+   ```
+
+5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
+
+## Project Structure
+
+```
+event-planner/
+├── src/
+│   ├── app/               # Next.js App Router pages
+│   ├── components/        # Reusable UI components
+│   ├── contexts/          # React contexts for state management
+│   ├── hooks/             # Custom React hooks
+│   ├── lib/               # Utility functions and libraries
+│   ├── types/             # TypeScript type definitions
+│   └── utils/             # Helper functions
+├── public/                # Static assets
+├── docs/                  # Project documentation
+└── .github/               # GitHub configuration files
+```
+
+## Documentation
+
+Comprehensive documentation is available in the `docs/` directory:
+
+- [Product Requirements](docs/PRD.md)
+- [Development Workflow](docs/WORKFLOW.md)
+- [Architecture Overview](docs/ARCHITECTURE.md)
+- [Setup Guide](docs/SETUP.md)
+- [Database Setup](docs/DATABASE_SETUP.sql)
+- [API Documentation](docs/API.md)
+- [Testing Strategies](docs/TESTING.md)
+- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
+- [Project Decisions](docs/DECISIONS.md)
+
+## Implementation Progress
+
+The implementation is being carried out in phases:
+
+- ✅ Phase 1: Project Setup
+- ⏳ Phase 2: Authentication & Navigation
+- ⏳ Phase 3: Customer Management - Basic
+- ⏳ Phase 4-17: Subsequent phases
+
+See the [Implementation Plan](docs/IMPLEMENTATION_PLAN.md) for more details.
+
+## Contributing
+
+Please read [CONTRIBUTING.md](.github/CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
