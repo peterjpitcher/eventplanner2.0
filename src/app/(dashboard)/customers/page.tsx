@@ -5,9 +5,6 @@ import { Customer } from '@/types';
 import { CustomerList } from '@/components/customers/customer-list';
 import { CustomerSearch } from '@/components/customers/customer-search';
 import { getCustomers, searchCustomers } from '@/utils/customer-service';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
-import { PlusIcon, ArrowUpOnSquareIcon } from '@heroicons/react/24/outline';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -71,24 +68,7 @@ export default function CustomersPage() {
 
   return (
     <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-semibold text-gray-900">Customers</h1>
-        
-        <div className="flex space-x-3">
-          <Link href="/customers/import">
-            <Button variant="outline" className="flex items-center">
-              <ArrowUpOnSquareIcon className="h-4 w-4 mr-2" />
-              Import
-            </Button>
-          </Link>
-          <Link href="/customers/new">
-            <Button className="flex items-center">
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Add Customer
-            </Button>
-          </Link>
-        </div>
-      </div>
+      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Customers</h1>
       
       <div className="mb-6">
         <CustomerSearch onSearch={handleSearch} />

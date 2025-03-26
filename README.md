@@ -4,7 +4,7 @@ A comprehensive web application for managing pub events, customer registrations,
 
 ## Features
 
-- **Customer Management**: Register and manage customer details, with CSV bulk import
+- **Customer Management**: Register and manage customer details
 - **Event Categories**: Organise events into categories
 - **Event Management**: Create, edit and manage pub events
 - **Booking Management**: Handle customer bookings for events
@@ -100,9 +100,7 @@ Comprehensive documentation is available in the `docs/` directory:
 - ✅ Phase 7: SMS Integration - Setup
 - ✅ Phase 8: Booking Confirmations
 - ✅ Phase 9: SMS Reminders
-- ✅ Phase 10: Booking Cancellations
-- ✅ Phase 11: Event Cancellations
-- ✅ Phase 12: Customer Management Enhancements
+- ⬜ Phase 10: Notification Preferences
 
 ## Contributing
 

@@ -1,22 +1,83 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { eventService } from '@/services/event-service';
-import { customerService } from '@/services/customer-service';
-import { formatDateTime } from '@/lib/date-utils';
+import { DashboardStats } from '@/components/dashboard/dashboard-stats';
+import { RecentActivity } from '@/components/dashboard/recent-activity';
+import { EventChart } from '@/components/dashboard/event-chart';
+import { getDashboardStats, getCategoryBookingData, getMonthlyBookingData, getRecentActivity } from '@/utils/dashboard-service';
+import { generateChartColors } from '@/components/dashboard/event-chart';
 
 export const metadata = {
   title: 'Dashboard | Event Planner',
   description: 'Event Planner Dashboard',
 };
 
-export default async function Dashboard() {
-  const { data: upcomingEvents } = await eventService.getUpcomingEvents(5);
-  const { data: customers } = await customerService.getCustomers();
+export default function Dashboard() {
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState<any>(null);
+  const [activities, setActivities] = useState<any[]>([]);
+  const [categoryData, setCategoryData] = useState<any>(null);
+  const [monthlyData, setMonthlyData] = useState<any>(null);
 
-  const customerCount = customers?.length || 0;
-  
+  useEffect(() => {
+    loadDashboardData();
+  }, []);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all dashboard data in parallel
+      const [statsData, activitiesData, categoryData, monthlyData] = await Promise.all([
+        getDashboardStats(),
+        getRecentActivity(),
+        getCategoryBookingData(),
+        getMonthlyBookingData()
+      ]);
+
+      setStats(statsData);
+      setActivities(activitiesData);
+      setCategoryData(categoryData);
+      setMonthlyData(monthlyData);
+    } catch (error) {
+      console.error('Error loading dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container py-6">
+        <PageHeader
+          title="Dashboard"
+          description="Overview of your event planning"
+        />
+        <div className="animate-pulse">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="bg-white shadow rounded-lg p-6">
+                <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+          <div className="bg-white shadow rounded-lg p-6 mb-6">
+            <div className="h-4 bg-gray-200 rounded w-1/4 mb-4"></div>
+            <div className="space-y-4">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-4 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container py-6">
       <PageHeader
@@ -24,94 +85,69 @@ export default async function Dashboard() {
         description="Overview of your event planning"
       />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        {/* Quick Stats */}
+      {/* Stats */}
+      <DashboardStats stats={stats} />
+
+      {/* Charts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Stats</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-50 p-4 rounded-md">
-              <p className="text-sm text-gray-500">Customers</p>
-              <p className="text-2xl font-bold">{customerCount}</p>
-              <Link href="/customers" className="text-sm text-blue-600 hover:underline">
-                View all
-              </Link>
-            </div>
-            <div className="bg-gray-50 p-4 rounded-md">
-              <p className="text-sm text-gray-500">Upcoming Events</p>
-              <p className="text-2xl font-bold">{upcomingEvents?.length || 0}</p>
-              <Link href="/events" className="text-sm text-blue-600 hover:underline">
-                View all
-              </Link>
-            </div>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Bookings by Category</h2>
+          <div className="h-80">
+            <EventChart
+              type="pie"
+              data={{
+                labels: categoryData?.labels || [],
+                datasets: [{
+                  data: categoryData?.data || [],
+                  backgroundColor: generateChartColors(categoryData?.labels?.length || 0),
+                  borderColor: generateChartColors(categoryData?.labels?.length || 0),
+                  borderWidth: 1
+                }]
+              }}
+            />
           </div>
         </div>
 
-        {/* Quick Actions */}
         <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-2 gap-4">
-            <Link href="/events/new" passHref>
-              <Button fullWidth>Create Event</Button>
-            </Link>
-            <Link href="/customers/new" passHref>
-              <Button variant="outline" fullWidth>Add Customer</Button>
-            </Link>
-            <Link href="/categories/new" passHref>
-              <Button variant="outline" fullWidth>Add Category</Button>
-            </Link>
-            <Link href="/settings" passHref>
-              <Button variant="secondary" fullWidth>Settings</Button>
-            </Link>
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Monthly Bookings</h2>
+          <div className="h-80">
+            <EventChart
+              type="line"
+              data={{
+                labels: monthlyData?.labels || [],
+                datasets: [{
+                  label: 'Bookings',
+                  data: monthlyData?.data || [],
+                  borderColor: '#3B82F6',
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  fill: true
+                }]
+              }}
+            />
           </div>
         </div>
       </div>
 
-      {/* Upcoming Events */}
-      <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-lg font-medium text-gray-900">Upcoming Events</h2>
-          <Link href="/events" className="text-sm text-blue-600 hover:underline">
-            View all events
-          </Link>
-        </div>
-        
-        {upcomingEvents && upcomingEvents.length > 0 ? (
-          <div className="divide-y divide-gray-200">
-            {upcomingEvents.map((event) => (
-              <div key={event.id} className="p-6 hover:bg-gray-50">
-                <Link href={`/events/${event.id}`} className="flex flex-col">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="text-base font-medium text-gray-900">{event.title}</h3>
-                    {event.category && (
-                      <div className="flex items-center">
-                        <div 
-                          className="w-3 h-3 rounded-full mr-2" 
-                          style={{ backgroundColor: event.category.color }} 
-                        />
-                        <span className="text-sm text-gray-500">{event.category.name}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm text-gray-500">
-                      {formatDateTime(event.date, event.start_time)}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {event.location || 'No location'}
-                    </p>
-                  </div>
-                </Link>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="p-6 text-center">
-            <p className="text-gray-500 mb-4">You don&apos;t have any upcoming events.</p>
-            <Link href="/events/new" passHref>
-              <Button>Create Your First Event</Button>
-            </Link>
-          </div>
-        )}
+      {/* Recent Activity */}
+      <div className="bg-white shadow rounded-lg p-6 mb-6">
+        <h2 className="text-lg font-medium text-gray-900 mb-4">Recent Activity</h2>
+        <RecentActivity activities={activities} />
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href="/events/new" passHref>
+          <Button fullWidth>Create Event</Button>
+        </Link>
+        <Link href="/customers/new" passHref>
+          <Button variant="outline" fullWidth>Add Customer</Button>
+        </Link>
+        <Link href="/customers/import" passHref>
+          <Button variant="outline" fullWidth>Import Customers</Button>
+        </Link>
+        <Link href="/reports" passHref>
+          <Button variant="secondary" fullWidth>View Reports</Button>
+        </Link>
       </div>
     </div>
   );
