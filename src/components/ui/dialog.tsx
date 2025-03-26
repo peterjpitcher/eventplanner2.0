@@ -5,7 +5,8 @@ import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const Dialog = DialogPrimitive.Root;
+// Rename to DialogRoot to avoid naming conflicts
+const DialogRoot = DialogPrimitive.Root;
 
 const DialogTrigger = DialogPrimitive.Trigger;
 
@@ -107,6 +108,7 @@ const DialogDescription = React.forwardRef<
 ));
 DialogDescription.displayName = DialogPrimitive.Description.displayName;
 
+// Our custom Dialog component
 interface DialogProps {
   open: boolean;
   onClose: () => void;
@@ -117,13 +119,26 @@ interface DialogProps {
 
 export function Dialog({ open, onClose, title, children, className }: DialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <DialogRoot open={open} onOpenChange={onClose}>
       <DialogContent className={className}>
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         {children}
       </DialogContent>
-    </Dialog>
+    </DialogRoot>
   );
-} 
+}
+
+export {
+  DialogRoot,
+  DialogTrigger,
+  DialogPortal,
+  DialogClose,
+  DialogOverlay,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+}; 
