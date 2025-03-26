@@ -119,4 +119,38 @@ Please read [CONTRIBUTING.md](.github/CONTRIBUTING.md) for details on our code o
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+# SMS Templates
+
+The application includes a template management system for SMS messages. This allows you to customize the content of messages sent for different events, such as:
+
+- Booking confirmations
+- 7-day reminders
+- 24-hour reminders
+- Booking cancellations
+- Event cancellations
+
+Visit the SMS Templates page to edit these templates. You can use placeholders in your templates to automatically insert data:
+
+| Placeholder | Description |
+|-------------|-------------|
+| `{customer_name}` | Customer's full name |
+| `{customer_first_name}` | Customer's first name |
+| `{event_name}` | Event title |
+| `{event_date}` | Event date (e.g., "January 1") |
+| `{event_time}` | Event time (e.g., "7 PM") |
+| `{seats}` | Number of seats booked |
+
+## Twilio Setup
+
+To enable SMS functionality, the application uses Twilio. Configure your Twilio credentials in your environment variables:
+
+```
+TWILIO_ACCOUNT_SID=your_account_sid
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_PHONE_NUMBER=your_twilio_phone_number
+SMS_ENABLED=true
+```
+
+When deployed to Vercel, add these as environment variables in your project settings. 

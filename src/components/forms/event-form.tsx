@@ -71,6 +71,7 @@ export const EventForm: React.FC<EventFormProps> = ({
         setFormData((prevData) => ({
           ...prevData,
           capacity: prevData.capacity ?? selectedCategory.default_capacity,
+          start_time: prevData.start_time === '09:00' ? selectedCategory.default_start_time : prevData.start_time
         }));
       }
     }
