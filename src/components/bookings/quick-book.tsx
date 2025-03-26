@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { BookingForm } from './booking-form';
 import { BookingFormData, bookingService } from '@/services/booking-service';
+import { SMSStatus } from './sms-status';
 import { toast } from 'sonner';
 
 interface QuickBookProps {
@@ -15,13 +16,13 @@ export function QuickBook({ eventId, onSuccess }: QuickBookProps) {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [bookingSuccess, setBookingSuccess] = useState(false);
-  const [smsStatus, setSmsStatus] = useState<'sent' | 'failed' | null>(null);
+  const [smsStatus, setSmsStatus] = useState<'sent' | 'failed' | 'pending' | null>(null);
 
   const handleSubmit = async (data: BookingFormData) => {
     setIsSubmitting(true);
     setError(null);
     setBookingSuccess(false);
-    setSmsStatus(null);
+    setSmsStatus('pending');
 
     try {
       if (!data.customer_id) {
@@ -55,7 +56,17 @@ export function QuickBook({ eventId, onSuccess }: QuickBookProps) {
       
       setBookingSuccess(true);
       setSmsStatus(response.smsSent ? 'sent' : 'failed');
-      toast.success('Booking created successfully');
+      
+      // Different toast messages based on SMS status
+      if (data.send_notification) {
+        if (response.smsSent) {
+          toast.success('Booking created successfully and SMS confirmation sent');
+        } else {
+          toast.success('Booking created successfully but SMS could not be sent');
+        }
+      } else {
+        toast.success('Booking created successfully (SMS notification disabled)');
+      }
       
       setTimeout(() => {
         setShowForm(false);
@@ -69,6 +80,7 @@ export function QuickBook({ eventId, onSuccess }: QuickBookProps) {
     } catch (err: any) {
       console.error('Error creating booking:', err);
       setError(err.message || 'An unexpected error occurred. Please try again.');
+      setSmsStatus(null);
       toast.error(err.message || 'Failed to create booking. Please try again.');
     } finally {
       setIsSubmitting(false);
@@ -76,66 +88,48 @@ export function QuickBook({ eventId, onSuccess }: QuickBookProps) {
   };
 
   return (
-    <div className="mt-6 bg-white shadow sm:rounded-lg">
-      <div className="px-4 py-5 sm:p-6">
-        <h3 className="text-lg leading-6 font-medium text-gray-900">Quick Book</h3>
-        
-        {!showForm ? (
-          <div className="mt-2 max-w-xl text-sm text-gray-500">
-            <p>Add a customer to this event with just a few clicks.</p>
-            <div className="mt-5">
-              <button
-                type="button"
-                onClick={() => setShowForm(true)}
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Add Booking
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-5">
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-md">
-                {error}
-              </div>
-            )}
-            
-            {bookingSuccess && (
-              <div className="mb-4 p-3 bg-green-50 text-green-700 border border-green-200 rounded-md">
-                <p>Booking created successfully!</p>
-                {smsStatus === 'sent' && (
-                  <p className="text-sm mt-1">Confirmation SMS sent to customer.</p>
-                )}
-                {smsStatus === 'failed' && (
-                  <p className="text-sm mt-1 text-yellow-600">Note: Confirmation SMS could not be sent.</p>
-                )}
-              </div>
-            )}
-            
-            <BookingForm
-              eventId={eventId}
-              onSubmit={handleSubmit}
-              isSubmitting={isSubmitting}
-              error={error}
-            />
-            
-            <div className="mt-4">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowForm(false);
-                  setError(null);
-                  setBookingSuccess(false);
-                }}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
+    <div className="mt-4 border border-gray-200 rounded-lg bg-white p-4 shadow-sm">
+      <div className="flex justify-between items-center mb-4">
+        <h3 className="text-lg font-semibold">Quick Book</h3>
+        {!showForm && !bookingSuccess && (
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            Add Booking
+          </button>
         )}
       </div>
+
+      {bookingSuccess && (
+        <div className="bg-green-50 border border-green-200 rounded-md p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-green-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1 md:flex md:justify-between">
+              <p className="text-sm text-green-700">
+                Booking created successfully
+              </p>
+              <div className="mt-1 md:mt-0">
+                <SMSStatus status={smsStatus} />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showForm && !bookingSuccess && (
+        <BookingForm
+          eventId={eventId}
+          onSubmit={handleSubmit}
+          isSubmitting={isSubmitting}
+          error={error}
+        />
+      )}
     </div>
   );
 } 

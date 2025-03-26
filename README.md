@@ -1,15 +1,25 @@
 # Event Planner 2.0
 
-A comprehensive event management system for organizing events, managing bookings, and sending automated notifications.
+A comprehensive event planning application built with Next.js 14, React, Tailwind CSS, and Supabase.
 
 ## Features
 
-- **Event Management**: Create, edit, and manage events with detailed information
-- **Booking System**: Track attendees and manage bookings
-- **Customer Database**: Maintain customer information
-- **SMS Notifications**: Send automated confirmations and reminders via Twilio
-- **Template Management**: Customize notification templates
-- **Responsive Design**: Mobile-friendly interface for on-the-go management
+- **Event Management**: Create, update, and manage events with detailed information
+- **Customer Management**: Keep track of attendees and their details
+- **Booking System**: Allow customers to book seats for events
+- **SMS Notifications**: Send text message confirmations and reminders to customers
+- **Dashboard**: View key metrics and upcoming events
+- **Reports**: Generate reports on events, bookings, and customers
+
+## SMS Notification System
+
+The application includes a fully integrated SMS notification system that:
+
+- Sends booking confirmations when a new booking is created
+- Displays the SMS status for each booking (sent, failed, pending)
+- Allows manual resending of SMS confirmations from the booking detail page
+- Includes an opt-out toggle in the booking form for customers who don't want notifications
+- Provides detailed analytics on SMS delivery status
 
 ## Getting Started
 
@@ -44,7 +54,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token
 TWILIO_PHONE_NUMBER=your_twilio_phone_number
-SMS_ENABLED=true
+NEXT_PUBLIC_SMS_ENABLED=true
+NEXT_PUBLIC_LOG_LEVEL=info
 ```
 
 5. Start the development server
@@ -117,4 +128,34 @@ When deployed to Vercel, add these as environment variables in your project sett
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## Environment Variables
+
+- `NEXT_PUBLIC_SUPABASE_URL`: Your Supabase project URL
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: Your Supabase anonymous key
+- `NEXT_PUBLIC_SMS_ENABLED`: Enable/disable SMS functionality (true/false)
+- `NEXT_PUBLIC_LOG_LEVEL`: Set logging level (debug, info, warn, error)
+
+## Database Schema
+
+The application uses the following tables in Supabase:
+
+- `events`: Store event details
+- `customers`: Store customer information
+- `bookings`: Track event bookings
+- `sms_messages`: Log SMS communication
+
+## Architecture
+
+The application follows a clean architecture pattern:
+
+- `components/`: React components
+- `services/`: Business logic and API calls
+- `lib/`: Utility functions
+- `types/`: TypeScript interfaces and types
+- `app/`: Next.js pages and routes
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. 

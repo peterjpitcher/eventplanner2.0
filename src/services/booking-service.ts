@@ -1,13 +1,15 @@
 import { supabase } from '@/lib/supabase';
 import { Customer } from '@/types';
-import { Event } from './event-service';
+import { Event, eventService } from './event-service';
 import { smsService } from './sms-service';
 import { customerService } from './customer-service';
-import { eventService } from './event-service';
 import { format } from 'date-fns';
 import { ApiResponse } from '@/types';
 import { checkAndEnsureSmsConfig } from '@/lib/sms-utils';
 import { sendSMS } from '@/lib/sms-utils';
+import { createLogger } from '@/lib/logger';
+
+const logger = createLogger('booking-service');
 
 export interface Booking {
   id: string;
@@ -28,6 +30,23 @@ export interface BookingFormData {
   seats_or_reminder: string | number;
   send_notification?: boolean;
   notes?: string | null;
+}
+
+export interface BookingWithCustomerAndEvent extends Booking {
+  customer: Customer;
+  event: Event;
+}
+
+// Response type for booking operations
+export interface BookingResponse {
+  data?: Booking;
+  error?: any;
+  smsSent?: boolean;
+}
+
+export interface SMSResult {
+  success: boolean;
+  error?: string;
 }
 
 export const bookingService = {
@@ -61,7 +80,7 @@ export const bookingService = {
 
       return { data: bookingsWithRelations, error: null };
     } catch (error) {
-      console.error('Error fetching bookings:', error);
+      logger.error('Error fetching bookings:', error);
       return { data: null, error: error as Error };
     }
   },
@@ -92,7 +111,7 @@ export const bookingService = {
 
       return { data: bookingsWithCustomers, error: null };
     } catch (error) {
-      console.error(`Error fetching bookings for event ${eventId}:`, error);
+      logger.error(`Error fetching bookings for event ${eventId}:`, error);
       return { data: null, error: error as Error };
     }
   },
@@ -123,7 +142,7 @@ export const bookingService = {
 
       return { data: bookingsWithEvents, error: null };
     } catch (error) {
-      console.error(`Error fetching bookings for customer ${customerId}:`, error);
+      logger.error(`Error fetching bookings for customer ${customerId}:`, error);
       return { data: null, error: error as Error };
     }
   },
@@ -156,7 +175,7 @@ export const bookingService = {
         error: null
       };
     } catch (error) {
-      console.error(`Error fetching booking with ID ${id}:`, error);
+      logger.error(`Error fetching booking with ID ${id}:`, error);
       return { data: null, error: error as Error };
     }
   },
@@ -175,64 +194,35 @@ export const bookingService = {
   /**
    * Send a booking confirmation SMS
    */
-  async sendConfirmationSMS(
-    booking: Booking,
-    customer: Customer,
-    event: Event
-  ): Promise<{ success: boolean; error?: any }> {
+  async sendConfirmationSMS(booking: Booking, customer: Customer, event: Event): Promise<SMSResult> {
     try {
-      // Fetch the booking confirmation template
-      const { data: template } = await supabase
-        .from('sms_templates')
-        .select('*')
-        .eq('id', 'booking_confirmation')
-        .single();
-      
-      if (!template) {
-        console.error('Booking confirmation template not found');
-        return { success: false, error: 'SMS template not found' };
+      // Check if customer has a mobile number
+      if (!customer.mobile_number) {
+        return { success: false, error: 'Customer has no mobile number' };
       }
-      
-      // Format the event date and time
-      const eventDate = format(new Date(event.date), 'MMMM d');
-      const eventTime = event.start_time;
-      
-      // Process the template with booking data
-      let messageContent = template.content;
-      messageContent = messageContent.replace(/{customer_name}/g, `${customer.first_name} ${customer.last_name || ''}`);
-      messageContent = messageContent.replace(/{customer_first_name}/g, customer.first_name);
-      messageContent = messageContent.replace(/{event_name}/g, event.title);
-      messageContent = messageContent.replace(/{event_date}/g, eventDate);
-      messageContent = messageContent.replace(/{event_time}/g, eventTime);
-      messageContent = messageContent.replace(/{seats}/g, booking.seats_or_reminder.toString());
-      messageContent = messageContent.replace(/{booking_id}/g, booking.id);
-      
-      console.log(`Sending booking confirmation SMS to ${customer.mobile_number}`);
-      
-      // Send the SMS
-      const result = await sendSMS(customer.mobile_number, messageContent);
-      
-      // Log the SMS in the database
-      try {
-        await supabase.from('sms_messages').insert({
-          customer_id: customer.id,
-          booking_id: booking.id,
-          message_type: 'booking_confirmation',
-          content: messageContent,
-          phone_number: customer.mobile_number,
-          sent_at: new Date().toISOString(),
-          status: result.success ? 'sent' : 'failed',
-          message_sid: result.message?.sid || null,
-          error: result.success ? null : JSON.stringify(result.error)
-        });
-      } catch (logError) {
-        console.error('Error logging SMS to database:', logError);
-      }
-      
-      return result;
-    } catch (error) {
-      console.error('Error sending booking confirmation SMS:', error);
-      return { success: false, error };
+
+      // Format the date for the message
+      const eventDate = new Date(event.date);
+      const formattedDate = eventDate.toLocaleDateString('en-GB', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+
+      // Create the message
+      const message = `Hi ${customer.first_name}, your booking for ${event.title} on ${formattedDate} has been confirmed. You have reserved ${booking.seats_or_reminder} seat(s).`;
+
+      // Send the SMS via the SMS service
+      return await smsService.sendSMS({
+        to: customer.mobile_number,
+        message,
+        booking_id: booking.id,
+        message_type: 'booking_confirmation'
+      });
+    } catch (error: any) {
+      logger.error('Error sending confirmation SMS:', error);
+      return { success: false, error: error.message || 'Failed to send SMS' };
     }
   },
 
@@ -241,7 +231,7 @@ export const bookingService = {
    */
   async createBooking(booking: BookingFormData): Promise<ApiResponse<Booking> & { smsSent?: boolean }> {
     try {
-      console.log('Creating booking with data:', booking);
+      logger.info('Creating booking with data:', booking);
       
       // Validate booking data
       if (!booking.customer_id) {
@@ -260,110 +250,95 @@ export const bookingService = {
         };
       }
       
-      // Validate seats - ensure it's a valid number
       if (!booking.seats_or_reminder) {
         return { 
           data: null, 
-          error: new Error('Number of seats is required'), 
+          error: new Error('Seats/Reminder value is required'), 
           smsSent: false 
         };
       }
       
-      // Process seating value
-      let seatsValue = booking.seats_or_reminder;
-      if (typeof seatsValue === 'string') {
-        const parsedValue = parseInt(seatsValue, 10);
-        if (isNaN(parsedValue)) {
-          return { 
-            data: null, 
-            error: new Error('Invalid number of seats'), 
-            smsSent: false 
-          };
-        }
-        seatsValue = parsedValue;
-      }
+      // Determine if we should send SMS notification (default to true if undefined)
+      const send_notification = booking.send_notification !== false;
       
-      // Store whether to send SMS, then remove from database object
-      const shouldSendNotification = booking.send_notification !== false;
-      console.log('Should send notification:', shouldSendNotification);
-      
-      // Create database object without send_notification field
-      const { send_notification, ...bookingData } = booking;
-      
-      console.log('Sanitized booking data for database:', bookingData);
-
-      // Insert into database
-      const { data, error } = await supabase
+      // Create the booking in the database
+      const { data: newBooking, error } = await supabase
         .from('bookings')
-        .insert([bookingData])
-        .select('*')
+        .insert({
+          customer_id: booking.customer_id,
+          event_id: booking.event_id,
+          seats_or_reminder: booking.seats_or_reminder.toString(),
+          notes: booking.notes || null,
+          send_notification
+        })
+        .select()
         .single();
       
-      if (error) {
-        console.error('Database error creating booking:', error);
-        throw error;
-      }
-
-      // Fetch related data
-      const [customerResult, eventResult] = await Promise.all([
-        customerService.getCustomerById(data.customer_id),
-        eventService.getEventById(data.event_id)
-      ]);
-
-      const bookingWithRelations = {
-        ...data,
-        customer: customerResult.data,
-        event: eventResult.data
-      };
-
-      // Initialize SMS sent flag
-      let smsSent = false;
-
-      // Check if SMS is enabled using the utility function
-      const { smsEnabled } = await checkAndEnsureSmsConfig();
+      if (error) throw error;
       
-      console.log('SMS enabled status:', smsEnabled);
-
-      // If SMS is enabled and we should send notification, send a booking confirmation
-      if (smsEnabled && shouldSendNotification) {
-        console.log('Attempting to send SMS notification');
+      logger.info('Booking created successfully:', newBooking);
+      
+      // Default SMS sending status
+      let smsSent = false;
+      
+      // Check if SMS is enabled and notification is requested
+      if (send_notification) {
         try {
-          if (bookingWithRelations.customer && bookingWithRelations.event) {
-            console.log('Customer and event data available, sending SMS');
+          logger.info('Checking SMS configuration...');
+          const smsConfig = await checkAndEnsureSmsConfig();
+          
+          if (smsConfig.smsEnabled) {
+            logger.info('SMS is enabled, proceeding with notification');
             
-            // Send SMS and wait for the result
-            const smsResult = await this.sendConfirmationSMS(
-              bookingWithRelations,
-              bookingWithRelations.customer,
-              bookingWithRelations.event
-            );
+            // Fetch customer and event details for the SMS
+            const [customerResult, eventResult] = await Promise.all([
+              customerService.getCustomerById(booking.customer_id),
+              eventService.getEventById(booking.event_id)
+            ]);
             
-            smsSent = smsResult.success;
-            
-            if (smsResult.success) {
-              console.log('Successfully sent booking confirmation SMS');
+            if (customerResult.data && eventResult.data) {
+              // Check if customer has a mobile number
+              if (customerResult.data.mobile_number) {
+                logger.info(`Customer has mobile number: ${customerResult.data.mobile_number}`);
+                
+                // Send the confirmation SMS
+                const smsResult = await this.sendConfirmationSMS(
+                  newBooking as Booking,
+                  customerResult.data,
+                  eventResult.data
+                );
+                
+                smsSent = smsResult.success;
+                logger.info(`SMS sending ${smsSent ? 'successful' : 'failed'}`);
+              } else {
+                logger.info('Customer does not have a mobile number, skipping SMS');
+              }
             } else {
-              console.error('Error sending booking confirmation SMS:', smsResult.error);
+              logger.info('Failed to fetch customer or event details, skipping SMS');
             }
           } else {
-            console.error('Missing customer or event data for SMS', {
-              hasCustomer: !!bookingWithRelations.customer,
-              hasEvent: !!bookingWithRelations.event
-            });
+            logger.info(`SMS is disabled: ${smsConfig.message}`);
           }
         } catch (smsError) {
-          console.error('Error processing SMS for booking:', smsError);
-          // Continue with booking creation even if SMS fails
+          logger.error('Error sending SMS notification:', smsError);
+          // We don't want the booking creation to fail if SMS fails
         }
       } else {
-        console.log('SMS notification skipped: SMS enabled =', smsEnabled, 
-                    'Should send notification =', shouldSendNotification);
+        logger.info('SMS notification not requested, skipping');
       }
-
-      return { data: bookingWithRelations, error: null, smsSent };
+      
+      return {
+        data: newBooking as Booking,
+        error: null,
+        smsSent
+      };
     } catch (error) {
-      console.error('Error creating booking:', error);
-      return { data: null, error: error as Error, smsSent: false };
+      logger.error('Error creating booking:', error);
+      return { 
+        data: null, 
+        error: error as Error,
+        smsSent: false 
+      };
     }
   },
 
@@ -427,7 +402,7 @@ export const bookingService = {
       // Create database object without send_notification field
       const { send_notification, ...updateData } = bookingData;
       
-      console.log(`Updating booking ${id} with data:`, updateData);
+      logger.info(`Updating booking ${id} with data:`, updateData);
 
       // Perform the database update
       const { data, error } = await supabase
@@ -438,7 +413,7 @@ export const bookingService = {
         .single();
       
       if (error) {
-        console.error(`Database error updating booking ${id}:`, error);
+        logger.error(`Database error updating booking ${id}:`, error);
         throw error;
       }
       
@@ -470,18 +445,18 @@ export const bookingService = {
             smsSent = smsResult.success;
             
             if (!smsResult.success) {
-              console.error('Error sending booking update SMS:', smsResult.error);
+              logger.error('Error sending booking update SMS:', smsResult.error);
             }
           }
         } catch (smsError) {
-          console.error('Error processing SMS for booking update:', smsError);
+          logger.error('Error processing SMS for booking update:', smsError);
           // Continue with booking update even if SMS fails
         }
       }
       
       return { data: updatedBooking, error: null, smsSent };
     } catch (error) {
-      console.error(`Error updating booking ${id}:`, error);
+      logger.error(`Error updating booking ${id}:`, error);
       return { data: null, error: error as Error, smsSent: false };
     }
   },
@@ -491,7 +466,7 @@ export const bookingService = {
    */
   async deleteBooking(id: string): Promise<ApiResponse<null>> {
     try {
-      console.log(`Attempting to delete booking with ID: ${id}`);
+      logger.info(`Attempting to delete booking with ID: ${id}`);
       
       // First check if the booking exists
       const { data: existingBooking, error: checkError } = await supabase
@@ -502,7 +477,7 @@ export const bookingService = {
       
       if (checkError) {
         if (checkError.code === 'PGRST116') {
-          console.error(`Booking with ID ${id} not found for deletion`);
+          logger.error(`Booking with ID ${id} not found for deletion`);
           return { 
             data: null, 
             error: new Error(`Booking with ID ${id} not found`) 
@@ -518,7 +493,7 @@ export const bookingService = {
         .eq('id', id);
       
       if (deleteError) {
-        console.error(`Error during booking deletion for ID ${id}:`, deleteError);
+        logger.error(`Error during booking deletion for ID ${id}:`, deleteError);
         throw deleteError;
       }
       
@@ -530,13 +505,13 @@ export const bookingService = {
           .eq('booking_id', id);
       } catch (smsError) {
         // Non-critical error, just log it but continue
-        console.warn(`Could not archive SMS messages for booking ${id}:`, smsError);
+        logger.warn(`Could not archive SMS messages for booking ${id}:`, smsError);
       }
       
-      console.log(`Successfully deleted booking with ID: ${id}`);
+      logger.info(`Successfully deleted booking with ID: ${id}`);
       return { data: null, error: null };
     } catch (error) {
-      console.error(`Error deleting booking with ID ${id}:`, error);
+      logger.error(`Error deleting booking with ID ${id}:`, error);
       return { 
         data: null, 
         error: error instanceof Error 

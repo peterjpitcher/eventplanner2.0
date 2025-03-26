@@ -231,26 +231,6 @@ export function BookingForm({ booking, eventId, onSubmit, isSubmitting, error }:
         <p className="mt-1 text-sm text-gray-500">Enter the number of seats needed for this booking</p>
       </FormGroup>
 
-      <FormGroup label="Notification" htmlFor="send_notification">
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="send_notification"
-            name="send_notification"
-            checked={formData.send_notification}
-            onChange={handleInputChange}
-            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            disabled={isSubmitting}
-          />
-          <label htmlFor="send_notification" className="ml-2 block text-sm text-gray-700">
-            Send SMS notification to customer
-          </label>
-        </div>
-        <p className="mt-1 text-sm text-gray-500">
-          When checked, the customer will receive an SMS confirmation of their booking
-        </p>
-      </FormGroup>
-
       <FormGroup label="Notes" htmlFor="notes">
         <textarea
           id="notes"
@@ -258,29 +238,48 @@ export function BookingForm({ booking, eventId, onSubmit, isSubmitting, error }:
           value={formData.notes || ''}
           onChange={handleInputChange}
           rows={3}
-          className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
-          placeholder="Enter any additional notes"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+          placeholder="Add any special notes or requirements here"
           disabled={isSubmitting}
         />
       </FormGroup>
 
-      <div className="flex justify-end space-x-4">
+      <FormGroup label="SMS Notification" htmlFor="send_notification">
+        <div className="p-4 border border-gray-200 rounded-md bg-gray-50">
+          <div className="flex items-center mb-2">
+            <input
+              type="checkbox"
+              id="send_notification"
+              name="send_notification"
+              checked={formData.send_notification}
+              onChange={handleInputChange}
+              className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              disabled={isSubmitting}
+            />
+            <label htmlFor="send_notification" className="ml-2 text-base font-medium text-gray-700">
+              Send SMS confirmation
+            </label>
+          </div>
+          <p className="text-sm text-gray-600 ml-7">
+            When enabled, the customer will receive an automated SMS message confirming their booking details.
+            This includes the event name, date, time, and number of seats reserved.
+          </p>
+        </div>
+      </FormGroup>
+
+      <div className="flex justify-end space-x-3 mt-8">
         <Button
-          type="button"
-          variant="secondary"
-          onClick={() => window.history.back()}
+          type="submit"
           disabled={isSubmitting}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md shadow-sm"
         >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
           {isSubmitting ? (
             <>
-              <Spinner size="sm" />
-              <span className="ml-2">Saving...</span>
+              <Spinner size="sm" className="mr-2" />
+              {booking ? 'Updating...' : 'Creating...'}
             </>
           ) : (
-            booking ? 'Update Booking' : 'Create Booking'
+            <>{booking ? 'Update Booking' : 'Create Booking'}</>
           )}
         </Button>
       </div>
