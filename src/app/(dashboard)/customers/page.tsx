@@ -4,13 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { Customer } from '@/types';
 import { CustomerList } from '@/components/customers/customer-list';
 import { CustomerSearch } from '@/components/customers/customer-search';
+import { CustomerImport } from '@/components/customers/customer-import';
 import { getCustomers, searchCustomers } from '@/utils/customer-service';
+import { PlusIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
+import Link from 'next/link';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showImport, setShowImport] = useState(false);
 
   // Load customers on mount and when searchQuery changes
   useEffect(() => {
@@ -50,7 +54,17 @@ export default function CustomersPage() {
 
   // Handle customer deletion
   const handleCustomerDeleted = () => {
-    // Refresh the customer list
+    refreshCustomers();
+  };
+
+  // Handle import completion
+  const handleImportComplete = () => {
+    refreshCustomers();
+    setShowImport(false);
+  };
+
+  // Refresh customer list
+  const refreshCustomers = () => {
     if (searchQuery) {
       searchCustomers(searchQuery).then((response) => {
         if (!response.error) {
@@ -66,9 +80,43 @@ export default function CustomersPage() {
     }
   };
 
+  // Toggle import section visibility
+  const toggleImport = () => {
+    setShowImport(!showImport);
+  };
+
   return (
     <div>
-      <h1 className="text-2xl font-semibold text-gray-900 mb-6">Customers</h1>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6">
+        <h1 className="text-2xl font-semibold text-gray-900">Customers</h1>
+        
+        <div className="mt-4 md:mt-0 flex space-x-4">
+          <Link
+            href="/customers/new"
+            className="inline-flex items-center px-4 py-2 border border-transparent 
+              text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 
+              hover:bg-blue-700 focus:outline-none focus:ring-2 
+              focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <PlusIcon className="h-5 w-5 mr-2" />
+            New Customer
+          </Link>
+          
+          <button
+            type="button"
+            onClick={toggleImport}
+            className="hidden md:inline-flex items-center px-4 py-2 border border-gray-300 
+              text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white 
+              hover:bg-gray-50 focus:outline-none focus:ring-2 
+              focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+            Import Customers
+          </button>
+        </div>
+      </div>
+      
+      {showImport && <CustomerImport onImportComplete={handleImportComplete} />}
       
       <div className="mb-6">
         <CustomerSearch onSearch={handleSearch} />
@@ -87,6 +135,42 @@ export default function CustomersPage() {
       ) : (
         <div className="bg-white shadow overflow-hidden sm:rounded-lg">
           <CustomerList customers={customers} onCustomerDeleted={handleCustomerDeleted} />
+          
+          {customers.length === 0 && (
+            <div className="py-8 px-4 text-center">
+              {searchQuery ? (
+                <p className="text-gray-500">No customers found matching your search.</p>
+              ) : (
+                <div>
+                  <p className="text-gray-500 mb-4">No customers added yet.</p>
+                  <div className="flex justify-center space-x-4">
+                    <Link
+                      href="/customers/new"
+                      className="inline-flex items-center px-4 py-2 border border-transparent 
+                        text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 
+                        hover:bg-blue-700 focus:outline-none focus:ring-2 
+                        focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <PlusIcon className="h-5 w-5 mr-2" />
+                      Add Your First Customer
+                    </Link>
+                    
+                    <button
+                      type="button"
+                      onClick={toggleImport}
+                      className="hidden md:inline-flex items-center px-4 py-2 border border-gray-300 
+                        text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white 
+                        hover:bg-gray-50 focus:outline-none focus:ring-2 
+                        focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      <ArrowDownTrayIcon className="h-5 w-5 mr-2" />
+                      Import Customers
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { Customer, CustomerFormData } from '@/types';
+import { formatUKMobileNumber } from '@/lib/phone-utils';
 
 export const customerService = {
   /**
@@ -70,12 +71,34 @@ export const customerService = {
    * Search customers by name or mobile number
    */
   async searchCustomers(query: string): Promise<{ data: Customer[] | null; error: any }> {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .or(`first_name.ilike.%${query}%,last_name.ilike.%${query}%,mobile_number.ilike.%${query}%`)
-      .order('first_name')
-      .limit(10);
+    if (!query) {
+      return this.getCustomers();
+    }
+
+    // Check if we have a type-specific search
+    const typeMatch = query.match(/^(name|mobile):(.*)/);
+    let searchQuery = supabase.from('customers').select('*');
+
+    if (typeMatch) {
+      const [, searchType, searchTerm] = typeMatch;
+      
+      // Search by specific field type
+      if (searchType === 'name') {
+        searchQuery = searchQuery.or(`first_name.ilike.%${searchTerm}%,last_name.ilike.%${searchTerm}%`);
+      } else if (searchType === 'mobile') {
+        // For mobile search, standardize the format to match database format
+        const formattedMobile = formatUKMobileNumber(searchTerm);
+        searchQuery = searchQuery.ilike('mobile_number', `%${formattedMobile}%`);
+      }
+    } else {
+      // General search across all fields
+      searchQuery = searchQuery.or(
+        `first_name.ilike.%${query}%,last_name.ilike.%${query}%,mobile_number.ilike.%${query}%`
+      );
+    }
+    
+    // Apply ordering and limit
+    const { data, error } = await searchQuery.order('first_name').limit(50);
     
     return { data, error };
   }

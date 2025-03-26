@@ -126,3 +126,47 @@ Planned future enhancements to the customer management system include:
 5. Customer activity history
 6. Integration with event bookings
 7. SMS notification preferences 
+
+## Advanced Features
+
+The following advanced features have been implemented:
+
+### CSV Customer Import (Desktop Only)
+
+The CSV import functionality allows for bulk importing of customer data from CSV files. Key features include:
+
+- User-friendly import interface with file selection
+- Preview of data before importing
+- Validation of required fields and mobile number format
+- Detection of duplicate mobile numbers
+- Detailed error reporting
+- Batch processing for large imports
+- Import status and results summary
+
+#### CSV Format Requirements
+
+CSV files should have the following columns:
+- `first_name` (required)
+- `last_name`
+- `mobile_number` (required, must be a valid UK format)
+- `notes`
+
+The system supports various CSV formats, including quoted values, and standardizes mobile numbers during import.
+
+### Enhanced Search Functionality
+
+The search system has been enhanced with the following features:
+
+- Debounced search to reduce API calls
+- Ability to filter by search type (all fields, name only, mobile number only)
+- Improved UI with clear indicators of search status
+- Option to clear search with a single click
+- Mobile-responsive design
+- Increased result limit (50 results)
+
+### Mobile Number Standardization
+
+All mobile numbers are standardized during import and creation to ensure consistency:
+- Removing spaces, dashes, and other non-numeric characters
+- Converting international format (+44) to UK local format (07)
+- Validating against UK mobile number patterns 
