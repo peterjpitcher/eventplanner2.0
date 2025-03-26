@@ -1,15 +1,16 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Booking } from '@/services/booking-service';
+import { Booking, BookingFormData, bookingService } from '@/services/booking-service';
 import { Customer } from '@/types';
 import { Event } from '@/services/event-service';
 import { format } from 'date-fns';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
-import { SMSMessage } from '@/services/sms-service';
+import { SMSMessage, smsService } from '@/services/sms-service';
 import { BookingForm } from './booking-form';
-import { Dialog } from '../ui/dialog';
+import { Dialog } from '@/components/ui/dialog';
+import { Spinner } from '../ui/spinner';
 
 interface BookingDetailProps {
   booking: Booking;
@@ -27,6 +28,7 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
   smsMessages
 }) => {
   const [loading, setLoading] = useState(false);
+  const [reminderLoading, setReminderLoading] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -35,56 +37,45 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
   const has24HrReminder = smsMessages?.some(msg => msg.message_type === 'reminder_24hr');
 
   const handleSendReminder = async (reminderType: '7day' | '24hr') => {
-    setLoading(true);
+    setReminderLoading(reminderType);
     try {
-      const response = await fetch(`/api/reminders/${booking.id}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ reminderType }),
-      });
+      const response = await smsService.sendReminder(booking.id, reminderType);
       
-      const data = await response.json();
-      
-      if (response.ok) {
+      if (response.success) {
         toast.success(`${reminderType === '7day' ? '7-day' : '24-hour'} reminder sent`);
         if (onRefresh) onRefresh();
       } else {
-        toast.error(`Failed to send reminder: ${data.error}`);
+        toast.error(`Failed to send reminder: ${response.error}`);
       }
-    } catch (error) {
-      toast.error('An error occurred while sending the reminder');
+    } catch (error: any) {
+      toast.error(error.message || 'An error occurred while sending the reminder');
       console.error('Error sending reminder:', error);
     } finally {
-      setLoading(false);
+      setReminderLoading(null);
     }
   };
 
-  const handleUpdateBooking = async (formData: any) => {
+  const handleUpdateBooking = async (formData: BookingFormData) => {
     setLoading(true);
     setError(null);
     
     try {
-      const response = await fetch(`/api/bookings/${booking.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
+      const { data, error, smsSent } = await bookingService.updateBooking(booking.id, formData);
       
-      const data = await response.json();
-      
-      if (response.ok) {
-        toast.success('Booking updated successfully');
-        setIsEditing(false);
-        if (onRefresh) onRefresh();
-      } else {
-        setError(data.error || 'Failed to update booking');
+      if (error) {
+        throw error;
       }
-    } catch (error) {
-      setError('An unexpected error occurred');
+      
+      toast.success(
+        smsSent 
+          ? 'Booking updated successfully. SMS notification sent.' 
+          : 'Booking updated successfully'
+      );
+      setIsEditing(false);
+      if (onRefresh) onRefresh();
+    } catch (error: any) {
+      setError(error.message || 'Failed to update booking');
+      toast.error(error.message || 'Failed to update booking');
       console.error('Error updating booking:', error);
     } finally {
       setLoading(false);
@@ -143,9 +134,14 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
                   variant="outline" 
                   size="sm" 
                   onClick={() => handleSendReminder('7day')}
-                  disabled={loading}
+                  disabled={reminderLoading !== null}
                 >
-                  Send
+                  {reminderLoading === '7day' ? (
+                    <>
+                      <Spinner size="sm" />
+                      <span className="ml-1">Sending...</span>
+                    </>
+                  ) : 'Send'}
                 </Button>
               )}
             </div>
@@ -165,9 +161,14 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
                   variant="outline" 
                   size="sm" 
                   onClick={() => handleSendReminder('24hr')}
-                  disabled={loading}
+                  disabled={reminderLoading !== null}
                 >
-                  Send
+                  {reminderLoading === '24hr' ? (
+                    <>
+                      <Spinner size="sm" />
+                      <span className="ml-1">Sending...</span>
+                    </>
+                  ) : 'Send'}
                 </Button>
               )}
             </div>

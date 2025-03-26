@@ -1,15 +1,18 @@
 import React from 'react';
+import { cn } from '@/lib/utils';
 
 type AlertVariant = 'info' | 'success' | 'warning' | 'error';
 
-interface AlertProps {
+export interface AlertProps {
   children: React.ReactNode;
   variant?: AlertVariant;
+  className?: string;
 }
 
 export const Alert: React.FC<AlertProps> = ({
   children,
   variant = 'info',
+  className,
 }) => {
   const variantClasses = {
     info: 'bg-blue-50 text-blue-800 border-blue-200',
@@ -20,7 +23,7 @@ export const Alert: React.FC<AlertProps> = ({
 
   return (
     <div
-      className={`${variantClasses[variant]} border p-4 rounded-md`}
+      className={cn(`${variantClasses[variant]} border p-4 rounded-md`, className)}
       role="alert"
     >
       {children}

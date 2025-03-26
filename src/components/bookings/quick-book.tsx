@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { BookingForm } from './booking-form';
 import { BookingFormData, bookingService } from '@/services/booking-service';
+import { toast } from 'sonner';
 
 interface QuickBookProps {
   eventId: string;
@@ -23,28 +24,52 @@ export function QuickBook({ eventId, onSuccess }: QuickBookProps) {
     setSmsStatus(null);
 
     try {
-      const response = await bookingService.createBooking(data);
+      if (!data.customer_id) {
+        throw new Error('Please select a customer');
+      }
+      
+      if (!data.event_id) {
+        throw new Error('Event ID is missing');
+      }
+      
+      if (!data.seats_or_reminder) {
+        throw new Error('Please enter a valid number of seats');
+      }
+      
+      const seatsValue = typeof data.seats_or_reminder === 'string' 
+        ? parseInt(data.seats_or_reminder, 10) 
+        : data.seats_or_reminder;
+        
+      if (isNaN(seatsValue) || seatsValue <= 0) {
+        throw new Error('Please enter a valid number of seats');
+      }
+
+      const response = await bookingService.createBooking({
+        ...data,
+        event_id: eventId
+      });
       
       if (response.error) {
-        console.error('Error creating booking:', response.error);
-        setError('Failed to create booking. Please try again.');
-      } else {
-        setBookingSuccess(true);
-        setSmsStatus(response.smsSent ? 'sent' : 'failed');
-        
-        setTimeout(() => {
-          setShowForm(false);
-          setBookingSuccess(false);
-          setSmsStatus(null);
-          
-          if (onSuccess) {
-            onSuccess();
-          }
-        }, 3000); // Auto-close after success
+        throw response.error;
       }
-    } catch (err) {
-      console.error('Unexpected error creating booking:', err);
-      setError('An unexpected error occurred. Please try again.');
+      
+      setBookingSuccess(true);
+      setSmsStatus(response.smsSent ? 'sent' : 'failed');
+      toast.success('Booking created successfully');
+      
+      setTimeout(() => {
+        setShowForm(false);
+        setBookingSuccess(false);
+        setSmsStatus(null);
+        
+        if (onSuccess) {
+          onSuccess();
+        }
+      }, 3000);
+    } catch (err: any) {
+      console.error('Error creating booking:', err);
+      setError(err.message || 'An unexpected error occurred. Please try again.');
+      toast.error(err.message || 'Failed to create booking. Please try again.');
     } finally {
       setIsSubmitting(false);
     }

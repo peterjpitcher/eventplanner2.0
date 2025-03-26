@@ -4,6 +4,9 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Booking, BookingFormData, bookingService } from '@/services/booking-service';
 import { BookingForm } from './booking-form';
+import { Spinner } from '../ui/spinner';
+import { Alert } from '../ui/alert';
+import { toast } from 'sonner';
 
 interface BookingEditProps {
   bookingId: string;
@@ -19,56 +22,94 @@ export function BookingEdit({ bookingId, eventId }: BookingEditProps) {
 
   useEffect(() => {
     const fetchBooking = async () => {
-      setIsLoading(true);
-      
-      const { data, error } = await bookingService.getBookingById(bookingId);
-      
-      if (error) {
-        console.error('Error fetching booking:', error);
-        setError('Failed to load booking. Please try again.');
-      } else {
-        setBooking(data);
+      try {
+        setIsLoading(true);
         setError(null);
+        
+        const { data, error } = await bookingService.getBookingById(bookingId);
+        
+        if (error) {
+          throw error;
+        }
+        
+        if (!data) {
+          throw new Error('Booking not found');
+        }
+        
+        setBooking(data);
+      } catch (err: any) {
+        console.error('Error fetching booking:', err);
+        setError(err.message || 'Failed to load booking. Please try again.');
+      } finally {
+        setIsLoading(false);
       }
-      
-      setIsLoading(false);
     };
 
     fetchBooking();
   }, [bookingId]);
 
   const handleSubmit = async (data: BookingFormData) => {
-    setIsSubmitting(true);
-    setError(null);
-
     try {
-      const response = await bookingService.updateBooking(bookingId, data);
+      setIsSubmitting(true);
+      setError(null);
+
+      // Validation
+      if (!data.customer_id) {
+        throw new Error('Please select a customer');
+      }
+
+      if (!data.event_id) {
+        throw new Error('Event ID is required');
+      }
+
+      if (!data.seats_or_reminder || isNaN(Number(data.seats_or_reminder)) || Number(data.seats_or_reminder) <= 0) {
+        throw new Error('Please enter a valid number of seats');
+      }
+
+      const response = await bookingService.updateBooking(bookingId, {
+        ...data,
+        event_id: data.event_id || eventId
+      });
       
       if (response.error) {
-        console.error('Error updating booking:', response.error);
-        setError('Failed to update booking. Please try again.');
-      } else {
-        // Redirect back to event details page
-        router.push(`/events/${eventId}`);
+        throw new Error(typeof response.error === 'string' ? response.error : 'Failed to update booking');
       }
-    } catch (err) {
-      console.error('Unexpected error updating booking:', err);
-      setError('An unexpected error occurred. Please try again.');
+      
+      toast.success('Booking updated successfully');
+      // Redirect back to event details page
+      router.push(`/events/${eventId}`);
+    } catch (err: any) {
+      console.error('Error updating booking:', err);
+      setError(err.message || 'Failed to update booking. Please try again.');
+      toast.error(err.message || 'Failed to update booking. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
   };
 
   if (isLoading) {
-    return <div className="text-center p-4">Loading booking details...</div>;
+    return (
+      <div className="flex justify-center items-center p-8">
+        <Spinner />
+        <span className="ml-2 text-gray-500">Loading booking details...</span>
+      </div>
+    );
   }
 
-  if (error) {
-    return <div className="text-red-500 p-4">{error}</div>;
-  }
-
-  if (!booking) {
-    return <div className="text-red-500 p-4">Booking not found</div>;
+  if (!booking && !isLoading && !error) {
+    return (
+      <Alert variant="error">
+        Booking not found. The booking may have been deleted or you may not have permission to view it.
+        <div className="mt-4">
+          <button
+            onClick={() => router.push(`/events/${eventId}`)}
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            Back to Event
+          </button>
+        </div>
+      </Alert>
+    );
   }
 
   return (
@@ -88,18 +129,22 @@ export function BookingEdit({ bookingId, eventId }: BookingEditProps) {
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
         <div className="px-4 py-5 sm:p-6">
           {error && (
-            <div className="mb-4 p-3 bg-red-50 text-red-700 border border-red-200 rounded-md">
-              {error}
+            <div className="mb-4">
+              <Alert variant="error">
+                {error}
+              </Alert>
             </div>
           )}
           
-          <BookingForm
-            booking={booking}
-            eventId={eventId}
-            onSubmit={handleSubmit}
-            isSubmitting={isSubmitting}
-            error={error}
-          />
+          {booking && (
+            <BookingForm
+              booking={booking}
+              eventId={eventId}
+              onSubmit={handleSubmit}
+              isSubmitting={isSubmitting}
+              error={error}
+            />
+          )}
         </div>
       </div>
     </div>

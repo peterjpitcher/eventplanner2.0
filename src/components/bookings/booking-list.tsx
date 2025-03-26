@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Booking, bookingService } from '@/services/booking-service';
-import { Customer } from '@/types';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Button } from '../ui/button';
@@ -12,11 +11,13 @@ import { format } from 'date-fns';
 
 interface BookingListProps {
   eventId: string;
+  onBookingChange?: () => void; // Callback for when bookings change
 }
 
-export function BookingList({ eventId }: BookingListProps) {
+export function BookingList({ eventId, onBookingChange }: BookingListProps) {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null); // Track which booking is being deleted
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,9 +35,9 @@ export function BookingList({ eventId }: BookingListProps) {
       }
       
       setBookings(data || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching bookings:', err);
-      setError('Failed to load bookings. Please try again.');
+      setError(err.message || 'Failed to load bookings. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -48,6 +49,7 @@ export function BookingList({ eventId }: BookingListProps) {
     }
 
     try {
+      setIsDeleting(bookingId);
       const { error } = await bookingService.deleteBooking(bookingId);
       
       if (error) {
@@ -56,9 +58,16 @@ export function BookingList({ eventId }: BookingListProps) {
       
       toast.success('Booking deleted successfully');
       fetchBookings(); // Refresh the list
-    } catch (err) {
+      
+      // Notify parent component if provided
+      if (onBookingChange) {
+        onBookingChange();
+      }
+    } catch (err: any) {
       console.error('Error deleting booking:', err);
-      toast.error('Failed to delete booking. Please try again.');
+      toast.error(err.message || 'Failed to delete booking. Please try again.');
+    } finally {
+      setIsDeleting(null);
     }
   };
 
@@ -66,6 +75,7 @@ export function BookingList({ eventId }: BookingListProps) {
     return (
       <div className="flex justify-center items-center py-8">
         <Spinner />
+        <span className="ml-2 text-gray-500">Loading bookings...</span>
       </div>
     );
   }
@@ -74,6 +84,15 @@ export function BookingList({ eventId }: BookingListProps) {
     return (
       <Alert variant="error">
         {error}
+        <div className="mt-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchBookings}
+          >
+            Try Again
+          </Button>
+        </div>
       </Alert>
     );
   }
@@ -98,7 +117,7 @@ export function BookingList({ eventId }: BookingListProps) {
               Mobile Number
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-              Seats/Reminder
+              Seats
             </th>
             <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Notes
@@ -145,8 +164,16 @@ export function BookingList({ eventId }: BookingListProps) {
                   size="sm"
                   onClick={() => handleDelete(booking.id)}
                   className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                  disabled={isDeleting === booking.id}
                 >
-                  Delete
+                  {isDeleting === booking.id ? (
+                    <>
+                      <Spinner size="sm" />
+                      <span className="ml-1">Deleting...</span>
+                    </>
+                  ) : (
+                    'Delete'
+                  )}
                 </Button>
               </td>
             </tr>

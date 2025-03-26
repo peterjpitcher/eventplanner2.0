@@ -14,6 +14,7 @@ export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingBooking, setDeletingBooking] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBookings();
@@ -30,9 +31,9 @@ export default function BookingsPage() {
       }
       
       setBookings(data || []);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching bookings:', err);
-      setError('Failed to load bookings. Please try again.');
+      setError(err.message || 'Failed to load bookings. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -44,6 +45,7 @@ export default function BookingsPage() {
     }
 
     try {
+      setDeletingBooking(bookingId);
       const { error } = await bookingService.deleteBooking(bookingId);
       
       if (error) {
@@ -52,9 +54,11 @@ export default function BookingsPage() {
       
       toast.success('Booking deleted successfully');
       fetchBookings(); // Refresh the list
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error deleting booking:', err);
-      toast.error('Failed to delete booking. Please try again.');
+      toast.error(err.message || 'Failed to delete booking. Please try again.');
+    } finally {
+      setDeletingBooking(null);
     }
   };
 
@@ -63,6 +67,7 @@ export default function BookingsPage() {
       <AppLayout>
         <div className="flex justify-center items-center py-8">
           <Spinner />
+          <span className="ml-2 text-gray-500">Loading bookings...</span>
         </div>
       </AppLayout>
     );
@@ -73,6 +78,11 @@ export default function BookingsPage() {
       <AppLayout>
         <Alert variant="error">
           {error}
+          <div className="mt-2">
+            <Button variant="outline" size="sm" onClick={fetchBookings}>
+              Try Again
+            </Button>
+          </div>
         </Alert>
       </AppLayout>
     );
@@ -131,7 +141,7 @@ export default function BookingsPage() {
                       Event
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Seats/Reminder
+                      Seats
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Booked On
@@ -172,8 +182,16 @@ export default function BookingsPage() {
                           size="sm"
                           onClick={() => handleDelete(booking.id)}
                           className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          disabled={deletingBooking === booking.id}
                         >
-                          Delete
+                          {deletingBooking === booking.id ? (
+                            <>
+                              <Spinner size="sm" />
+                              <span className="ml-1">Deleting...</span>
+                            </>
+                          ) : (
+                            'Delete'
+                          )}
                         </Button>
                       </td>
                     </tr>

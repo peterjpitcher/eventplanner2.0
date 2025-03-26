@@ -30,7 +30,8 @@ export function BookingForm({ booking, eventId, onSubmit, isSubmitting, error }:
   const [formData, setFormData] = useState<BookingFormData>({
     customer_id: booking?.customer_id || '',
     event_id: eventId || booking?.event_id || '',
-    seats_or_reminder: booking?.seats_or_reminder || '1 seat',
+    seats_or_reminder: booking?.seats_or_reminder?.toString() || '1',
+    send_notification: booking?.send_notification !== undefined ? booking.send_notification : true,
     notes: booking?.notes || ''
   });
 
@@ -42,14 +43,15 @@ export function BookingForm({ booking, eventId, onSubmit, isSubmitting, error }:
         const { data, error } = await customerService.getCustomers();
         
         if (error) {
-          toast.error('Failed to load customers');
+          toast.error(typeof error === 'string' ? error : 'Failed to load customers');
           console.error('Error fetching customers:', error);
-        } else {
-          setCustomers(data || []);
-          setFilteredCustomers(data || []);
+          return;
         }
-      } catch (err) {
-        toast.error('An unexpected error occurred');
+        
+        setCustomers(data || []);
+        setFilteredCustomers(data || []);
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to load customers');
         console.error('Error fetching customers:', err);
       } finally {
         setIsLoadingCustomers(false);
@@ -72,13 +74,14 @@ export function BookingForm({ booking, eventId, onSubmit, isSubmitting, error }:
         const { data, error } = await eventService.getEvents();
         
         if (error) {
-          toast.error('Failed to load events');
+          toast.error(typeof error === 'string' ? error : 'Failed to load events');
           console.error('Error fetching events:', error);
-        } else {
-          setEvents(data || []);
+          return;
         }
-      } catch (err) {
-        toast.error('An unexpected error occurred');
+        
+        setEvents(data || []);
+      } catch (err: any) {
+        toast.error(err.message || 'Failed to load events');
         console.error('Error fetching events:', err);
       } finally {
         setIsLoadingEvents(false);
@@ -102,7 +105,15 @@ export function BookingForm({ booking, eventId, onSubmit, isSubmitting, error }:
   }, [searchQuery, customers]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
+    const { name, value, type } = e.target as HTMLInputElement;
+    
+    // Handle checkbox separately
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => ({ ...prev, [name]: checked }));
+      return;
+    }
+    
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -120,12 +131,18 @@ export function BookingForm({ booking, eventId, onSubmit, isSubmitting, error }:
       return;
     }
     
-    if (!formData.seats_or_reminder) {
-      toast.error('Please select seats or reminder preference');
+    if (!formData.seats_or_reminder || isNaN(Number(formData.seats_or_reminder)) || Number(formData.seats_or_reminder) <= 0) {
+      toast.error('Please enter a valid number of seats');
       return;
     }
 
-    await onSubmit(formData);
+    // Convert seats_or_reminder to a number for submission
+    const submissionData = {
+      ...formData,
+      seats_or_reminder: Number(formData.seats_or_reminder)
+    };
+
+    await onSubmit(submissionData);
   };
 
   return (
@@ -158,6 +175,7 @@ export function BookingForm({ booking, eventId, onSubmit, isSubmitting, error }:
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               required
+              disabled={isSubmitting}
             >
               <option value="">-- Select a customer --</option>
               {filteredCustomers.map((customer) => (
@@ -184,6 +202,7 @@ export function BookingForm({ booking, eventId, onSubmit, isSubmitting, error }:
               onChange={handleInputChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               required
+              disabled={isSubmitting}
             >
               <option value="">-- Select an event --</option>
               {events.map((event) => (
@@ -196,22 +215,40 @@ export function BookingForm({ booking, eventId, onSubmit, isSubmitting, error }:
         </FormGroup>
       )}
 
-      <FormGroup label="Seats/Reminder" htmlFor="seats_or_reminder" error={!formData.seats_or_reminder ? 'Please select seats or reminder preference' : undefined}>
-        <select
+      <FormGroup label="Number of Seats" htmlFor="seats_or_reminder" error={!formData.seats_or_reminder || isNaN(Number(formData.seats_or_reminder)) || Number(formData.seats_or_reminder) <= 0 ? 'Please enter a valid number of seats' : undefined}>
+        <Input
+          type="number"
           id="seats_or_reminder"
           name="seats_or_reminder"
           value={formData.seats_or_reminder}
           onChange={handleInputChange}
+          min="1"
+          max="100"
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
           required
-        >
-          <option value="1 seat">1 seat</option>
-          <option value="2 seats">2 seats</option>
-          <option value="3 seats">3 seats</option>
-          <option value="4 seats">4 seats</option>
-          <option value="5+ seats">5+ seats</option>
-          <option value="Reminder only">Reminder only</option>
-        </select>
+          disabled={isSubmitting}
+        />
+        <p className="mt-1 text-sm text-gray-500">Enter the number of seats needed for this booking</p>
+      </FormGroup>
+
+      <FormGroup label="Notification" htmlFor="send_notification">
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            id="send_notification"
+            name="send_notification"
+            checked={formData.send_notification}
+            onChange={handleInputChange}
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            disabled={isSubmitting}
+          />
+          <label htmlFor="send_notification" className="ml-2 block text-sm text-gray-700">
+            Send SMS notification to customer
+          </label>
+        </div>
+        <p className="mt-1 text-sm text-gray-500">
+          When checked, the customer will receive an SMS confirmation of their booking
+        </p>
       </FormGroup>
 
       <FormGroup label="Notes" htmlFor="notes">
@@ -223,6 +260,7 @@ export function BookingForm({ booking, eventId, onSubmit, isSubmitting, error }:
           rows={3}
           className="block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
           placeholder="Enter any additional notes"
+          disabled={isSubmitting}
         />
       </FormGroup>
 

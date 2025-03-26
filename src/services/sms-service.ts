@@ -642,6 +642,110 @@ export const smsService = {
         error 
       };
     }
+  },
+
+  /**
+   * Send a reminder SMS for a booking
+   * @param bookingId ID of the booking to send a reminder for
+   * @param reminderType Type of reminder ('7day' or '24hr')
+   */
+  async sendReminder(bookingId: string, reminderType: '7day' | '24hr'): Promise<{ success: boolean; error?: any }> {
+    try {
+      // First check if a reminder of this type has already been sent
+      const hasReminder = await this.hasReceivedReminder(bookingId, reminderType);
+      
+      if (hasReminder) {
+        return { 
+          success: false, 
+          error: `A ${reminderType === '7day' ? '7-day' : '24-hour'} reminder has already been sent for this booking.` 
+        };
+      }
+
+      // Get booking details with customer and event
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .select(`
+          *,
+          customer:customer_id (*),
+          event:event_id (*)
+        `)
+        .eq('id', bookingId)
+        .single();
+      
+      if (bookingError || !booking) {
+        return { success: false, error: bookingError || 'Booking not found' };
+      }
+
+      if (!booking.customer) {
+        return { success: false, error: 'Customer information not found' };
+      }
+
+      if (!booking.event) {
+        return { success: false, error: 'Event information not found' };
+      }
+
+      // Format the date and time for the SMS
+      const eventDate = new Date(booking.event.start_time);
+      const formattedDate = eventDate.toLocaleDateString('en-GB');
+      const formattedTime = eventDate.toLocaleTimeString('en-GB', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false
+      });
+      const dayName = eventDate.toLocaleDateString('en-GB', { weekday: 'long' });
+
+      // Prepare the reminder data
+      const reminderData: BookingReminderData = {
+        event_name: booking.event.title,
+        event_date: formattedDate,
+        event_time: formattedTime,
+        event_day_name: dayName,
+        customer_name: booking.customer.first_name,
+        seats: booking.seats_or_reminder
+      };
+
+      // Get the appropriate template
+      const messageType = reminderType === '7day' ? 'reminder_7day' : 'reminder_24hr';
+      
+      // Process the template with the data
+      const messageContent = processTemplate(messageType, reminderData);
+      
+      // Send the SMS
+      const smsResult = await sendSMS(
+        booking.customer.mobile_number,
+        messageContent
+      );
+
+      if (!smsResult.success) {
+        return { 
+          success: false, 
+          error: smsResult.error?.message || 'Failed to send SMS' 
+        };
+      }
+
+      // Record the SMS in the database
+      const { error: insertError } = await supabase
+        .from('sms_messages')
+        .insert({
+          customer_id: booking.customer_id,
+          booking_id: bookingId,
+          message_type: messageType,
+          message_content: messageContent,
+          sent_at: new Date().toISOString(),
+          status: smsResult.message?.status || 'sent',
+          message_sid: smsResult.message?.sid
+        });
+
+      if (insertError) {
+        console.error('Error recording SMS in database:', insertError);
+        // We still consider this a success since the SMS was sent
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error sending reminder SMS:', error);
+      return { success: false, error };
+    }
   }
 };
 
