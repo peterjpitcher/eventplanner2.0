@@ -22,7 +22,37 @@ module.exports = {
           950: '#082f49',
         },
       },
+      spacing: {
+        'safe-top': 'var(--safe-area-top)',
+        'safe-bottom': 'var(--safe-area-bottom)',
+        'safe-left': 'var(--safe-area-left)',
+        'safe-right': 'var(--safe-area-right)',
+      },
+      screens: {
+        'xs': '375px',
+      },
+      minWidth: {
+        'touch': '44px',
+      },
+      minHeight: {
+        'touch': '44px',
+      },
     },
   },
-  plugins: [],
+  plugins: [
+    function({ addUtilities }) {
+      const newUtilities = {
+        '.touch-manipulation': {
+          'touch-action': 'manipulation',
+        },
+        '.touch-none': {
+          'touch-action': 'none',
+        },
+        '.tap-transparent': {
+          '-webkit-tap-highlight-color': 'transparent',
+        }
+      };
+      addUtilities(newUtilities, ['responsive', 'hover']);
+    },
+  ],
 }; 

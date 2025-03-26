@@ -1,3 +1,82 @@
 @tailwind base;
 @tailwind components;
-@tailwind utilities; 
+@tailwind utilities;
+
+/* Mobile-specific CSS Variables */
+:root {
+  --safe-area-top: env(safe-area-inset-top, 0);
+  --safe-area-bottom: env(safe-area-inset-bottom, 0);
+  --safe-area-left: env(safe-area-inset-left, 0);
+  --safe-area-right: env(safe-area-inset-right, 0);
+}
+
+/* Base styles */
+body {
+  @apply bg-gray-50 text-gray-900;
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlight on mobile */
+  touch-action: manipulation; /* Improve touch responsiveness */
+}
+
+/* Mobile viewport height fix */
+.h-screen-mobile {
+  height: 100vh; /* Fallback */
+  height: calc(var(--vh, 1vh) * 100); /* Mobile viewport fix */
+}
+
+.h-safe-area-bottom {
+  height: var(--safe-area-bottom);
+}
+
+.pt-safe-area-top {
+  padding-top: var(--safe-area-top);
+}
+
+/* Mobile-optimized touch targets */
+.touch-target-min {
+  @apply min-h-[44px] min-w-[44px]; /* Minimum touch target size */
+}
+
+/* Mobile form enhancements */
+@media (max-width: 768px) {
+  input, select, textarea, button {
+    @apply text-base; /* Larger font for inputs on mobile */
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+  
+  input[type="checkbox"],
+  input[type="radio"] {
+    @apply h-5 w-5; /* Larger checkboxes and radio buttons */
+  }
+}
+
+/* Prevent pull to refresh on mobile */
+html, body {
+  overscroll-behavior-y: contain;
+}
+
+/* Hide scrollbar on mobile while preserving functionality */
+@media (max-width: 768px) {
+  .hide-scrollbar {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none; /* Chrome, Safari and Opera */
+  }
+}
+
+/* Layer styles */
+@layer components {
+  .mobile-card {
+    @apply rounded-xl p-4 bg-white shadow-sm; 
+  }
+  
+  .mobile-input {
+    @apply py-3 px-4 text-base rounded-lg w-full touch-manipulation;
+  }
+  
+  .mobile-button {
+    @apply h-12 px-5 rounded-lg flex items-center justify-center text-base font-medium touch-manipulation;
+  }
+} 

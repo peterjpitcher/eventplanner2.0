@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'default' | 'outline' | 'secondary' | 'danger';
-  size?: 'default' | 'sm' | 'lg';
+  size?: 'default' | 'sm' | 'lg' | 'mobile';
   fullWidth?: boolean;
   isLoading?: boolean;
 }
@@ -25,6 +25,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       default: 'h-10 px-4 py-2',
       sm: 'h-8 px-3 text-sm',
       lg: 'h-12 px-6',
+      mobile: 'h-12 px-5 py-3 text-base',
     };
 
     return (
@@ -34,6 +35,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           variants[variant],
           sizes[size],
           fullWidth ? 'w-full' : '',
+          'touch-manipulation',
           className
         )}
         ref={ref}
