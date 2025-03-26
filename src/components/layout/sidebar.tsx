@@ -9,12 +9,16 @@ import {
   CalendarIcon,
   TagIcon,
   CogIcon,
+  ChatBubbleLeftRightIcon,
+  BuildingOfficeIcon,
 } from '@heroicons/react/24/outline';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: HomeIcon },
   { name: 'Customers', href: '/customers', icon: UsersIcon },
   { name: 'Events', href: '/events', icon: CalendarIcon },
+  { name: 'Venues', href: '/venues', icon: BuildingOfficeIcon },
+  { name: 'SMS Templates', href: '/sms-templates', icon: ChatBubbleLeftRightIcon },
   { name: 'Settings', href: '/settings', icon: CogIcon },
 ];
 

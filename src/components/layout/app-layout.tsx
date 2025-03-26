@@ -8,13 +8,14 @@ import { useAuth } from '@/contexts/auth-context';
 interface AppLayoutProps {
   children: ReactNode;
   withContainer?: boolean;
+  skipAuth?: boolean;
 }
 
-export function AppLayout({ children, withContainer = true }: AppLayoutProps) {
+export function AppLayout({ children, withContainer = true, skipAuth = false }: AppLayoutProps) {
   const { user, isLoading } = useAuth();
 
   // Show loading spinner while auth state is determined
-  if (isLoading) {
+  if (isLoading && !skipAuth) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-gray-100">
         <div className="flex flex-col items-center space-y-4 p-6 max-w-md mx-auto text-center">
@@ -26,20 +27,20 @@ export function AppLayout({ children, withContainer = true }: AppLayoutProps) {
   }
 
   // If no user is logged in, the auth hook will redirect
-  if (!user) {
+  if (!user && !skipAuth) {
     return null;
   }
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar />
-      <div className="flex flex-col flex-1 md:ml-64">
+      {!skipAuth && <Sidebar />}
+      <div className={`flex flex-col flex-1 ${!skipAuth ? 'md:ml-64' : ''}`}>
         <main className="flex-1 p-4 md:p-6 overflow-auto">
           <div className={`max-w-7xl mx-auto ${withContainer ? 'bg-white shadow rounded-lg p-6' : ''}`}>
             {children}
           </div>
         </main>
-        <MobileNav />
+        {!skipAuth && <MobileNav />}
       </div>
     </div>
   );

@@ -11,11 +11,11 @@ export type SMSMessageType =
   | 'custom'
   | 'test';
 
-class SMSService {
+export class SMSService {
   /**
    * Send a test message to a phone number without requiring a booking or customer record
    */
-  async sendTestMessage({ phoneNumber, messageContent }: { phoneNumber: string; messageContent: string }): Promise<{ success: boolean; error?: any }> {
+  async sendTestMessage(phoneNumber: string, messageContent: string): Promise<{ success: boolean; error?: any }> {
     try {
       console.log(`Preparing to send test SMS to ${phoneNumber}`);
       

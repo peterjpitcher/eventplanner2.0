@@ -3,38 +3,56 @@
  */
 
 /**
- * Format a UK mobile number to a standard format
- * Removes spaces, dashes, and other non-numeric characters
- * Ensures 11-digit format starting with '07' (for UK)
+ * Format UK mobile number to E.164 format for Twilio
+ * 
+ * E.164 format example: +447123456789
+ * 
+ * Accepts:
+ * - 07xxx xxxxxx
+ * - 7xxx xxxxxx
+ * - +447xxx xxxxxx
+ * - 447xxx xxxxxx
  */
 export function formatUKMobileNumber(phoneNumber: string): string | null {
+  console.log('Formatting phone number:', phoneNumber);
+  
   if (!phoneNumber) return null;
   
-  // Remove all non-digit characters except the plus sign
-  const sanitized = phoneNumber.replace(/[^\d+]/g, '');
+  // Remove spaces, dashes, and other non-digit or + characters
+  const cleaned = phoneNumber.replace(/[^0-9+]/g, '');
+  console.log('Cleaned phone number:', cleaned);
   
-  // Handle different UK mobile number formats
-  if (sanitized.length === 10 && sanitized.startsWith('07')) {
-    // Convert 07XXXXXXXXX to +447XXXXXXXXX
-    return '+44' + sanitized.substring(1);
-  } else if (sanitized.length === 11 && sanitized.startsWith('447')) {
-    // Convert 447XXXXXXXXX to +447XXXXXXXXX
-    return '+' + sanitized;
-  } else if (sanitized.length === 12 && sanitized.startsWith('4407')) {
-    // Convert 4407XXXXXXXXX to +447XXXXXXXXX (sometimes people include the 0)
-    return '+44' + sanitized.substring(3);
-  } else if (sanitized.length === 13 && sanitized.startsWith('00447')) {
-    // Convert 00447XXXXXXXXX to +447XXXXXXXXX
-    return '+' + sanitized.substring(2);
-  } else if (sanitized.startsWith('+44') && (sanitized.length === 13 || sanitized.length === 14)) {
-    // Already in international format, just return as is
-    return sanitized;
-  } else if (sanitized.startsWith('+') && sanitized.length >= 11 && sanitized.length <= 15) {
-    // Other international format, assume it's correct
-    return sanitized;
+  // Already in E.164 format
+  if (cleaned.startsWith('+44') && cleaned.length === 13) {
+    console.log('Already in E.164 format');
+    return cleaned;
   }
   
-  // Not a valid mobile number format
+  // UK number starting with 44
+  if (cleaned.startsWith('44') && cleaned.length === 12) {
+    console.log('UK number starting with 44');
+    return '+' + cleaned;
+  }
+  
+  // UK mobile starting with 07
+  if (cleaned.startsWith('07') && cleaned.length === 11) {
+    console.log('UK mobile starting with 07');
+    return '+44' + cleaned.substring(1);
+  }
+  
+  // UK mobile starting with 7
+  if (cleaned.startsWith('7') && cleaned.length === 10) {
+    console.log('UK mobile starting with 7');
+    return '+44' + cleaned;
+  }
+  
+  // If it doesn't match any of these patterns but has a + assume it's an international number
+  if (cleaned.startsWith('+') && cleaned.length > 8) {
+    console.log('Assuming international format');
+    return cleaned;
+  }
+  
+  console.log('Invalid phone number format');
   return null;
 }
 
@@ -67,4 +85,68 @@ export function isValidUKMobileNumber(mobileNumber: string): boolean {
   }
 
   return false;
+}
+
+/**
+ * Formats a phone number to ensure it has the correct format for SMS sending
+ * 
+ * @param phoneNumber The phone number to format
+ * @returns The formatted phone number
+ */
+export function formatPhoneNumber(phoneNumber: string): string {
+  // Remove all non-digit characters except for the + symbol
+  let formatted = phoneNumber.replace(/[^\d+]/g, '');
+  
+  // Ensure the number starts with a +
+  if (!formatted.startsWith('+')) {
+    // If it starts with a country code like 44, add the +
+    if (formatted.startsWith('44')) {
+      formatted = '+' + formatted;
+    }
+    // If it's a UK number starting with 0, replace with +44
+    else if (formatted.startsWith('0')) {
+      formatted = '+44' + formatted.substring(1);
+    }
+    // Default to adding +44 if no country code is detected
+    else {
+      formatted = '+44' + formatted;
+    }
+  }
+  
+  return formatted;
+}
+
+/**
+ * Validates if a phone number is in a valid format for SMS
+ * 
+ * @param phoneNumber The phone number to validate
+ * @returns Boolean indicating if the number is valid
+ */
+export function isValidPhoneNumber(phoneNumber: string): boolean {
+  // Basic validation - should start with + and have at least 10 digits
+  const formatted = formatPhoneNumber(phoneNumber);
+  const phoneRegex = /^\+\d{10,15}$/;
+  return phoneRegex.test(formatted);
+}
+
+/**
+ * Masks a phone number for display, hiding part of it for privacy
+ * 
+ * @param phoneNumber The phone number to mask
+ * @returns The masked phone number
+ */
+export function maskPhoneNumber(phoneNumber: string): string {
+  if (!phoneNumber) return '';
+  
+  const formatted = formatPhoneNumber(phoneNumber);
+  // Keep the country code and last 4 digits, mask the rest
+  const lastFour = formatted.slice(-4);
+  const countryCodeEndIndex = formatted.startsWith('+') ? 3 : 0;
+  const countryCode = formatted.substring(0, countryCodeEndIndex);
+  
+  // Create the masked section
+  const maskLength = formatted.length - countryCodeEndIndex - 4;
+  const maskedSection = '*'.repeat(Math.max(2, maskLength));
+  
+  return `${countryCode}${maskedSection}${lastFour}`;
 } 

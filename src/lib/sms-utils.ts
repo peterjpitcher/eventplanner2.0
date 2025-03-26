@@ -1,271 +1,138 @@
 /**
- * SMS utility functions for sending messages via Twilio
+ * SMS utility functions for working with Twilio
  */
 
-import { formatUKMobileNumber } from './phone-utils';
-import { supabase } from './supabase';
-
-// Twilio client types
-type TwilioMessage = {
-  sid: string;
-  status: string;
-  dateCreated: Date;
-  to: string;
-  from: string;
-  body: string;
-  errorMessage?: string;
-  errorCode?: string;
-};
-
-// Cached Twilio client
-let twilioClient: any = null;
-
-// Get Twilio client with proper initialization
-function getTwilioClient() {
-  if (twilioClient) return twilioClient;
-  
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  
-  if (!accountSid || !authToken) {
-    throw new Error('Twilio credentials not configured');
-  }
-  
-  // Import Twilio dynamically to avoid issues with server components
-  const twilio = require('twilio');
-  twilioClient = twilio(accountSid, authToken);
-  return twilioClient;
-}
-
 /**
- * Send an SMS message using Twilio
+ * Sends an SMS message via Twilio
+ * @param to The recipient phone number in E.164 format
+ * @param body The message content
+ * @returns Result object with success status and message/error details
  */
 export async function sendSMS(
   to: string,
   body: string
-): Promise<{ success: boolean; message?: TwilioMessage; error?: any }> {
+): Promise<{ success: boolean; message?: any; error?: any }> {
   try {
-    console.log(`Preparing to send SMS to ${to}`);
-    
-    // First check if SMS is enabled
+    // Check if SMS is enabled in the environment
     const { smsEnabled, message: configMessage } = await checkAndEnsureSmsConfig();
     
     if (!smsEnabled) {
-      console.log(`SMS is disabled: ${configMessage}. Simulating success.`);
+      console.log(`SMS is disabled: ${configMessage}. SMS not sent.`);
+      return { 
+        success: false, 
+        error: `SMS is disabled: ${configMessage}`
+      };
+    }
+    
+    // In development/test mode, don't actually send SMS
+    if (process.env.NODE_ENV !== 'production' || process.env.SMS_SIMULATION === 'true') {
+      console.log('SMS simulation mode active - not sending actual SMS');
+      console.log(`Would send SMS to: ${to}`);
+      console.log(`Message content: ${body}`);
+      
+      // Return a simulated success response
       return {
         success: true,
         message: {
-          sid: `SIMULATED_${Date.now()}`,
+          sid: `SIMULATED_SID_${Date.now()}`,
           status: 'simulated',
-          dateCreated: new Date(),
-          to,
-          from: 'SIMULATOR',
-          body
-        }
+        },
       };
     }
     
-    // Format the recipient's phone number to E.164 format
-    const formattedNumber = formatUKMobileNumber(to);
-    if (!formattedNumber) {
-      console.error(`Invalid phone number format: ${to}`);
-      return {
-        success: false,
-        error: `Invalid phone number format: ${to}`
-      };
-    }
-    
-    // Get the sender's phone number
+    // For production, actually send via Twilio
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN; 
     const fromNumber = process.env.TWILIO_PHONE_NUMBER;
-    if (!fromNumber) {
-      console.error('Twilio phone number not configured');
-      return {
-        success: false,
-        error: 'Twilio phone number not configured'
-      };
+    
+    if (!accountSid || !authToken || !fromNumber) {
+      throw new Error('Missing Twilio credentials in environment variables');
     }
     
-    console.log(`Sending SMS from ${fromNumber} to ${formattedNumber}`);
+    // Dynamic import to avoid loading in SSR context
+    const twilio = await import('twilio');
+    const client = twilio.default(accountSid, authToken);
     
-    try {
-      // Get Twilio client and send message
-      const client = getTwilioClient();
-      
-      const message = await client.messages.create({
-        body,
-        from: fromNumber,
-        to: formattedNumber
-      });
-      
-      console.log(`Message sent with SID: ${message.sid}, Status: ${message.status}`);
-      
-      return {
-        success: true,
-        message
-      };
-    } catch (twilioError: any) {
-      // Handle Twilio-specific errors
-      console.error('Twilio error sending SMS:', twilioError);
-      
-      // Format error message for user feedback
-      const errorMessage = twilioError.message || 'Unknown Twilio error';
-      const errorCode = twilioError.code || 'UNKNOWN';
-      
-      return {
-        success: false,
-        error: {
-          message: `Failed to send SMS: ${errorMessage}`,
-          code: errorCode,
-          details: twilioError
-        }
-      };
-    }
-  } catch (error: any) {
-    console.error('Unexpected error sending SMS:', error);
-    return {
-      success: false,
-      error: {
-        message: `Unexpected error: ${error.message || 'Unknown error'}`,
-        details: error
-      }
-    };
-  }
-}
-
-/**
- * Process a template string with placeholder values
- */
-export function processTemplate(template: string, values: Record<string, string | number>): string {
-  let processed = template;
-  
-  // Replace each placeholder with its value
-  for (const [key, value] of Object.entries(values)) {
-    const placeholder = `{${key}}`;
-    processed = processed.replace(new RegExp(placeholder, 'g'), String(value));
-  }
-  
-  return processed;
-}
-
-/**
- * Test Twilio connection without sending an actual message
- */
-export async function testTwilioConnection(): Promise<{ success: boolean; message?: string; error?: any }> {
-  try {
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    
-    if (!accountSid || !authToken) {
-      return {
-        success: false,
-        error: 'Missing Twilio credentials'
-      };
-    }
-    
-    try {
-      // Get account info instead of sending a message
-      const client = getTwilioClient();
-      const account = await client.api.accounts(accountSid).fetch();
-      
-      return {
-        success: true,
-        message: `Connected to Twilio account: ${account.friendlyName || account.sid}`
-      };
-    } catch (twilioError: any) {
-      // Handle Twilio-specific errors
-      return {
-        success: false,
-        error: `Twilio authentication failed: ${twilioError.message || 'Unknown Twilio error'}`
-      };
-    }
-  } catch (error: any) {
-    console.error('Error testing Twilio connection:', error);
-    return {
-      success: false,
-      error: `Unexpected error: ${error.message || 'Unknown error'}`
-    };
-  }
-}
-
-/**
- * Check if SMS is enabled in the system and create config row if it doesn't exist
- */
-export async function checkAndEnsureSmsConfig(): Promise<{ smsEnabled: boolean; message: string }> {
-  try {
-    // Ensure environment variables are set
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const phoneNumber = process.env.TWILIO_PHONE_NUMBER;
-    
-    console.log('SMS check - ENV vars:', {
-      hasSid: !!accountSid,
-      hasToken: !!authToken,
-      hasPhone: !!phoneNumber,
-      smsEnabled: process.env.SMS_ENABLED
+    // Send the message
+    const twilioMessage = await client.messages.create({
+      body,
+      from: fromNumber,
+      to,
     });
     
-    // First check if the SMS_ENABLED app config exists
-    const { data: configData, error: configError } = await supabase
-      .from('app_config')
-      .select('*')
-      .eq('key', 'sms_enabled')
-      .single();
-    
-    if (configError && configError.code !== 'PGRST116') {
-      // If there's an error other than "not found"
-      console.error('Error fetching SMS config:', configError);
-      return { 
-        smsEnabled: process.env.SMS_ENABLED === 'true',
-        message: 'Error checking SMS configuration' 
-      };
-    }
-    
-    // If config doesn't exist, create it based on env var
-    if (!configData || configError?.code === 'PGRST116') {
-      console.log('Creating SMS config in database');
-      const isEnabled = !!(accountSid && authToken && phoneNumber && process.env.SMS_ENABLED === 'true');
-      
-      await supabase
-        .from('app_config')
-        .upsert({ 
-          key: 'sms_enabled',
-          value: isEnabled ? 'true' : 'false',
-          description: 'Whether SMS notifications are enabled'
-        });
-      
-      return { 
-        smsEnabled: isEnabled,
-        message: `SMS ${isEnabled ? 'enabled' : 'disabled'} and configuration created` 
-      };
-    }
-    
-    // Config exists, use it
-    const smsEnabled = configData.value === 'true';
-    
-    // Update config if env vars don't support SMS but config says it's enabled
-    if (smsEnabled && (!accountSid || !authToken || !phoneNumber || process.env.SMS_ENABLED !== 'true')) {
-      console.log('SMS environment variables missing, updating config to disabled');
-      
-      await supabase
-        .from('app_config')
-        .update({ value: 'false' })
-        .eq('key', 'sms_enabled');
-      
-      return { 
-        smsEnabled: false,
-        message: 'SMS disabled due to missing configuration' 
-      };
-    }
+    console.log(`SMS sent successfully to ${to}, SID: ${twilioMessage.sid}`);
     
     return {
-      smsEnabled,
-      message: `SMS is ${smsEnabled ? 'enabled' : 'disabled'}`
+      success: true,
+      message: twilioMessage,
     };
   } catch (error) {
-    console.error('Error in SMS config check:', error);
+    console.error('Error sending SMS:', error);
     return {
-      smsEnabled: false,
-      message: 'Error checking SMS configuration'
+      success: false,
+      error,
     };
   }
+}
+
+/**
+ * Process a template with a templateId and data
+ * @param templateId The ID of the template to use
+ * @param data The data to populate the template with
+ * @returns The processed template string
+ */
+export async function processTemplate(
+  templateId: string,
+  data: any
+): Promise<string> {
+  // Import template utilities
+  const { getTemplateDetails, processTemplate: processTemplateContent } = await import('./templates');
+  
+  // Get the template content
+  const template = await getTemplateDetails(templateId);
+  
+  if (!template) {
+    throw new Error(`Template with ID ${templateId} not found`);
+  }
+  
+  // Process the template with the provided data
+  return processTemplateContent(template.content, data);
+}
+
+/**
+ * Checks if SMS is enabled and properly configured
+ * @returns Object with smsEnabled status and a message explaining the status
+ */
+export async function checkAndEnsureSmsConfig(): Promise<{ smsEnabled: boolean; message: string }> {
+  // Check if SMS is globally enabled
+  const smsEnabled = process.env.SMS_ENABLED === 'true';
+  
+  if (!smsEnabled) {
+    return { smsEnabled: false, message: 'SMS is disabled in environment settings' };
+  }
+  
+  // In development mode, check if we're in simulation mode
+  if (process.env.NODE_ENV !== 'production' && process.env.SMS_SIMULATION === 'true') {
+    return { smsEnabled: true, message: 'SMS is in simulation mode' };
+  }
+  
+  // Check if Twilio credentials are configured
+  const hasTwilioConfig = !!(
+    process.env.TWILIO_ACCOUNT_SID &&
+    process.env.TWILIO_AUTH_TOKEN &&
+    process.env.TWILIO_PHONE_NUMBER
+  );
+  
+  if (!hasTwilioConfig) {
+    return { 
+      smsEnabled: false, 
+      message: 'Twilio credentials are not properly configured'
+    };
+  }
+  
+  // All checks passed
+  return { 
+    smsEnabled: true, 
+    message: 'SMS is enabled and properly configured'
+  };
 } 

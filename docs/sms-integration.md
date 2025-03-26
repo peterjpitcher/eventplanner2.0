@@ -1,24 +1,175 @@
-# SMS Integration Documentation
+# SMS Integration Guide
+
+This document provides comprehensive information about the SMS integration in the Event Planner 2.0 application. It covers setup, configuration, and usage of the SMS functionality.
 
 ## Overview
 
-This document provides comprehensive details on implementing and using the SMS functionality in the Event Planner application. The SMS service allows sending messages to customers for appointment notifications, reminders, and other communications.
+The SMS integration allows the application to:
+- Send booking confirmations
+- Send automated reminders (7-day and 24-hour)
+- Send cancellation notifications
+- Process customer replies
 
-## Configuration
+## Prerequisites
 
-### Environment Variables
+The SMS functionality requires a Twilio account:
+- [Twilio](https://www.twilio.com/) - For sending and receiving SMS messages
 
-The following environment variables must be set in your `.env.local` file:
+## Environment Configuration
+
+Add the following environment variables to your `.env.local` file:
 
 ```
-# Twilio SMS Settings
-TWILIO_ACCOUNT_SID=your_account_sid
-TWILIO_AUTH_TOKEN=your_auth_token
-TWILIO_PHONE_NUMBER=your_twilio_phone_number
-SMS_ENABLED=true
+# Twilio Configuration for SMS
+TWILIO_ACCOUNT_SID=your-twilio-account-sid
+TWILIO_AUTH_TOKEN=your-twilio-auth-token
+TWILIO_PHONE_NUMBER=your-twilio-phone-number
+
+# SMS Configuration
+SMS_SIMULATION=true  # Set to 'true' in development to simulate SMS without actual sending
+SMS_ENABLED=true     # Master switch to enable/disable SMS functionality
 ```
 
-The `SMS_ENABLED` flag allows enabling/disabling SMS functionality without removing credentials.
+- `TWILIO_ACCOUNT_SID`: Found in your Twilio Console dashboard
+- `TWILIO_AUTH_TOKEN`: Found in your Twilio Console dashboard
+- `TWILIO_PHONE_NUMBER`: The Twilio phone number you purchased (in E.164 format, e.g., +447123456789)
+- `SMS_SIMULATION`: Set to 'true' during development to avoid sending actual messages
+- `SMS_ENABLED`: Master switch to enable/disable all SMS functionality
+
+## SMS Templates
+
+The system uses templates for different types of messages. Templates are stored in the database and can be managed through the admin interface.
+
+### Template Placeholders
+
+Templates use placeholders in the format `{placeholder_name}` that get replaced with actual values when a message is sent.
+
+Available placeholders include:
+- `{customer_name}` - Customer's full name
+- `{event_name}` - Name of the event
+- `{event_date}` - Date of the event (formatted)
+- `{event_time}` - Time of the event
+- `{seats}` - Number of seats booked
+
+### Default Templates
+
+The system comes with the following default templates:
+
+#### Booking Confirmation
+```
+Hi {customer_name}, your booking for {event_name} on {event_date} at {event_time} is confirmed. You have reserved {seats} seat(s). We look forward to seeing you!
+```
+
+#### Booking Cancellation
+```
+Hi {customer_name}, your booking for {event_name} on {event_date} at {event_time} has been cancelled. Please contact us if you have any questions.
+```
+
+#### Event Cancellation
+```
+Hi {customer_name}, we regret to inform you that {event_name} on {event_date} at {event_time} has been cancelled. We apologize for any inconvenience.
+```
+
+#### 7-Day Reminder
+```
+Hi {customer_name}, this is a reminder about {event_name} on {event_date} at {event_time}. You have {seats} seat(s) reserved. See you then!
+```
+
+#### 24-Hour Reminder
+```
+Hi {customer_name}, just a reminder that {event_name} is tomorrow at {event_time}. You have {seats} seat(s) reserved. Looking forward to seeing you!
+```
+
+## Template Management
+
+You can manage SMS templates through the admin interface at `/sms-templates`. This interface provides:
+
+1. **Template Editing** - Modify the content and description of templates
+2. **Template Preview** - See how a template will appear with sample data
+3. **Test Sending** - Send a test message using the template to verify it works correctly
+
+## Implementation Details
+
+### SMS Template System
+
+The SMS template system consists of:
+
+1. **Database Storage** - Templates are stored in the `sms_templates` table
+2. **Template Loading** - Templates are loaded from the database when needed
+3. **Placeholder Replacement** - Placeholders are replaced with actual values
+
+### SMS Sending Process
+
+When sending an SMS:
+
+1. The system loads the appropriate template
+2. Placeholders are replaced with actual data
+3. The SMS is sent via Twilio
+4. The message is logged in the database
+
+### Reminder System
+
+The reminder system consists of:
+
+1. **Scheduled Processing** - A daily CRON job checks for upcoming events
+2. **7-Day Reminders** - Sent exactly 7 days before an event
+3. **24-Hour Reminders** - Sent exactly 24 hours before an event
+4. **Duplicate Prevention** - Flags in the database prevent duplicate reminders
+
+## Development Testing
+
+For testing SMS functionality during development:
+
+1. Set `SMS_SIMULATION=true` in your `.env.local` file to prevent actual SMS sending
+2. When in simulation mode, SMS details will be logged to the console
+3. Use the test functionality in the SMS Templates admin page
+4. Check the database to verify SMS records are being created
+
+## Troubleshooting
+
+### Common Issues
+
+**SMS not being sent**
+- Check that `SMS_ENABLED` is set to 'true'
+- Verify Twilio credentials are correct
+- Check that the phone number is in a valid format
+
+**Invalid phone number errors**
+- Ensure the phone number is in a valid UK format
+- The system accepts formats like:
+  - 07123456789
+  - +447123456789
+  - 447123456789
+
+**Template processing issues**
+- Verify that all required placeholders are provided
+- Check template formatting and syntax
+
+## Database Schema
+
+### SMS Templates Table
+
+The `sms_templates` table has the following structure:
+
+| Column       | Type                    | Description                          |
+|--------------|-------------------------|--------------------------------------|
+| id           | TEXT                    | Primary key (template identifier)    |
+| name         | TEXT                    | Display name of the template         |
+| content      | TEXT                    | Template content with placeholders   |
+| description  | TEXT                    | Description of when template is used |
+| placeholders | TEXT[]                  | Array of placeholder names           |
+| created_at   | TIMESTAMP WITH TIME ZONE| Creation timestamp                   |
+| updated_at   | TIMESTAMP WITH TIME ZONE| Last update timestamp                |
+
+### Reminder Tracking
+
+The `bookings` table has additional columns for reminder tracking:
+
+| Column            | Type                    | Description                                |
+|-------------------|-------------------------|--------------------------------------------|
+| last_reminder_sent| TIMESTAMP WITH TIME ZONE| When the last reminder was sent            |
+| reminder_7day_sent| BOOLEAN                 | Whether the 7-day reminder has been sent   |
+| reminder_24hr_sent| BOOLEAN                 | Whether the 24-hour reminder has been sent |
 
 ## Core SMS Utilities
 
@@ -241,47 +392,6 @@ const smsService = new SMSService();
 await smsService.sendTestMessage('+447123456789', 'Test message');
 ```
 
-## Implementation Details
-
-### Database Schema
-
-The SMS functionality relies on the following database tables:
-
-#### `sms_messages`
-
-| Column | Type | Description |
-|--------|------|-------------|
-| id | uuid | Primary key |
-| customer_id | uuid | Foreign key to customers (optional) |
-| booking_id | uuid | Foreign key to bookings (optional) |
-| message_type | text | Type of message (e.g., 'CONFIRMATION', 'REMINDER', 'CUSTOM') |
-| content | text | The message content |
-| phone_number | text | Recipient phone number in E.164 format |
-| sent_at | timestamp | When the message was sent |
-| status | text | Twilio status (e.g., 'queued', 'sent', 'delivered', 'failed') |
-| message_sid | text | Twilio message SID |
-| error | json | Error details if sending failed |
-
-#### `app_config`
-
-Contains application configuration including SMS settings.
-
-| Column | Type | Description |
-|--------|------|-------------|
-| key | text | Primary key, e.g., 'sms_enabled' |
-| value | text | Setting value, e.g., 'true' or 'false' |
-| description | text | Human-readable description |
-
-### SMS Service Methods
-
-The `SMSService` class provides these key methods:
-
-- `sendMessage`: Sends an SMS message with support for tracking in the database
-- `sendTestMessage`: Sends a test message without booking association
-- `countUnreadReplies`: Counts unread SMS replies for notifications
-- `markReplyAsRead`: Marks an SMS reply as read
-- `getMessageLogs`: Retrieves SMS message logs with filtering options
-
 ## Best Practices
 
 1. **Phone Number Validation**: Always format phone numbers using `formatUKMobileNumber` before sending SMS.
@@ -292,33 +402,6 @@ The `SMSService` class provides these key methods:
 6. **Message Templates**: Use predefined templates for consistent messaging.
 7. **Rate Limiting**: Implement rate limiting to prevent accidental message flooding.
 8. **Monitoring**: Regularly monitor the SMS delivery success rates.
-
-## Troubleshooting
-
-### Common Issues
-
-1. **Authentication Errors**:
-   - Check that your Twilio credentials are correct
-   - Verify the account is active and has a positive balance
-
-2. **Invalid Phone Numbers**:
-   - Ensure phone numbers are in E.164 format (+447XXXXXXXXX for UK)
-   - Verify the phone number is capable of receiving SMS
-
-3. **Missing Messages**:
-   - Check the `sms_messages` table for delivery status
-   - Verify Twilio logs for any delivery issues
-
-4. **API Errors**:
-   - 400-level errors typically indicate invalid requests
-   - 500-level errors suggest server or Twilio service issues
-
-### Debugging Tips
-
-1. Enable detailed logging by setting `DEBUG=true` in your environment
-2. Use the test functions to validate connection without affecting real data
-3. Check server logs for detailed Twilio API responses
-4. Verify network connectivity to Twilio's API endpoints
 
 ---
 
