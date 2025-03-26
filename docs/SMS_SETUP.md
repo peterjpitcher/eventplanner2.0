@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Event Planner 2.0 application includes SMS notification capabilities that allow you to automatically send text messages to customers for booking confirmations, reminders, and other communications. This guide explains how to set up and use this functionality.
+The Event Planner 2.0 application includes SMS notification capabilities that allow you to automatically send text messages to customers for booking confirmations, cancellations, reminders, and other communications. This guide explains how to set up and use this functionality.
 
 ## Configuration
 
@@ -84,6 +84,26 @@ On the booking details page:
 3. See when the SMS was sent (if applicable)
 4. Use the "Resend SMS" button to send another confirmation if needed
 
+### Cancellation Notifications
+
+#### For Individual Bookings
+
+When deleting a booking:
+
+1. Click the "Delete" button on the booking detail page
+2. In the confirmation dialog, you'll see an option to "Send cancellation SMS to customer"
+3. If checked, a cancellation notification will be sent when the booking is deleted
+4. You'll receive feedback on whether the SMS was sent successfully
+
+#### For Entire Events
+
+When cancelling an event:
+
+1. Click the "Cancel Event" button on the event detail page
+2. In the cancellation dialog, you'll see an option to "Send cancellation SMS to all customers who booked this event"
+3. If checked, cancellation messages will be sent to all affected customers
+4. After cancellation, you'll see a summary showing the total number of messages, how many were sent successfully, and how many failed
+
 ### SMS Status Icons
 
 The application uses the following status indicators:
@@ -128,6 +148,16 @@ This guide covers the default simulated SMS sending. To integrate with a real SM
 1. Sign up for a Twilio account and get your credentials
 2. Update the environment variables with your Twilio details
 3. Implement the Twilio API calls in the `sendSMS` function in `lib/sms-utils.ts`
+
+## SMS Message Types
+
+The system supports different types of SMS messages:
+
+1. **Booking Confirmation** (`booking_confirmation`): Sent when a booking is created or updated
+2. **Booking Cancellation** (`booking_cancellation`): Sent when a booking is deleted
+3. **Event Cancellation** (`event_cancellation`): Sent to all customers when an event is cancelled
+4. **7-day Reminder** (`reminder_7day`): Scheduled to be sent 7 days before an event (coming soon)
+5. **24-hour Reminder** (`reminder_24hr`): Scheduled to be sent 24 hours before an event (coming soon)
 
 ## SMS Templates
 
