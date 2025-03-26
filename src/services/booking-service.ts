@@ -199,13 +199,67 @@ export const bookingService = {
    */
   async createBooking(booking: BookingFormData): Promise<ApiResponse<Booking> & { smsSent?: boolean }> {
     try {
+      console.log('Creating booking with data:', booking);
+      
+      // Validate booking data
+      if (!booking.customer_id) {
+        return { 
+          data: null, 
+          error: new Error('Customer ID is required'), 
+          smsSent: false 
+        };
+      }
+      
+      if (!booking.event_id) {
+        return { 
+          data: null, 
+          error: new Error('Event ID is required'), 
+          smsSent: false 
+        };
+      }
+      
+      // Validate seats - ensure it's a valid number
+      if (!booking.seats_or_reminder) {
+        return { 
+          data: null, 
+          error: new Error('Number of seats is required'), 
+          smsSent: false 
+        };
+      }
+      
+      // Process seating value
+      let seatsValue = booking.seats_or_reminder;
+      if (typeof seatsValue === 'string') {
+        const parsedValue = parseInt(seatsValue, 10);
+        if (isNaN(parsedValue)) {
+          return { 
+            data: null, 
+            error: new Error('Invalid number of seats'), 
+            smsSent: false 
+          };
+        }
+        seatsValue = parsedValue;
+      }
+      
+      // Store whether to send SMS, then remove from database object
+      const shouldSendNotification = booking.send_notification !== false;
+      
+      // Create database object without send_notification field
+      const { send_notification, ...bookingData } = booking;
+      
+      console.log('Sanitized booking data for database:', bookingData);
+
+      // Insert into database
       const { data, error } = await supabase
         .from('bookings')
-        .insert([booking])
+        .insert([bookingData])
         .select('*')
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Database error creating booking:', error);
+        throw error;
+      }
 
       // Fetch related data
       const [customerResult, eventResult] = await Promise.all([
@@ -222,8 +276,8 @@ export const bookingService = {
       // Initialize SMS sent flag
       let smsSent = false;
 
-      // If SMS is enabled and send_notification is true, send a booking confirmation
-      if (process.env.SMS_ENABLED === 'true' && booking.send_notification !== false && bookingWithRelations) {
+      // If SMS is enabled and we should send notification, send a booking confirmation
+      if (process.env.SMS_ENABLED === 'true' && shouldSendNotification && bookingWithRelations) {
         try {
           if (bookingWithRelations.customer && bookingWithRelations.event) {
             // Send SMS and wait for the result
@@ -282,32 +336,36 @@ export const bookingService = {
         };
       }
       
-      // Prepare the data for update - handle seat numbers correctly
-      const updateData = {
-        ...bookingData,
-        // Ensure seats_or_reminder is converted to a number if it's a string
-        seats_or_reminder: typeof bookingData.seats_or_reminder === 'string' 
-          ? parseInt(bookingData.seats_or_reminder, 10) 
-          : bookingData.seats_or_reminder
-      };
-      
-      // Check if the number conversion worked
-      if (isNaN(updateData.seats_or_reminder as number)) {
-        return { 
-          data: null, 
-          error: new Error('Invalid number of seats'), 
-          smsSent: false 
-        };
+      // Process seating value
+      let seatsValue = bookingData.seats_or_reminder;
+      if (typeof seatsValue === 'string') {
+        const parsedValue = parseInt(seatsValue, 10);
+        if (isNaN(parsedValue)) {
+          return { 
+            data: null, 
+            error: new Error('Invalid number of seats'), 
+            smsSent: false 
+          };
+        }
+        seatsValue = parsedValue;
       }
       
       // Make sure seats is a positive number
-      if ((updateData.seats_or_reminder as number) <= 0) {
+      if (seatsValue <= 0) {
         return { 
           data: null, 
           error: new Error('Number of seats must be greater than zero'), 
           smsSent: false 
         };
       }
+      
+      // Store whether to send SMS, then remove from database object
+      const shouldSendNotification = bookingData.send_notification !== false;
+      
+      // Create database object without send_notification field
+      const { send_notification, ...updateData } = bookingData;
+      
+      console.log(`Updating booking ${id} with data:`, updateData);
 
       // Perform the database update
       const { data, error } = await supabase
@@ -321,11 +379,7 @@ export const bookingService = {
         console.error(`Database error updating booking ${id}:`, error);
         throw error;
       }
-
-      if (!data) {
-        throw new Error(`Booking with ID ${id} not found or could not be updated`);
-      }
-
+      
       // Fetch related data
       const [customerResult, eventResult] = await Promise.all([
         customerService.getCustomerById(data.customer_id),
@@ -337,15 +391,15 @@ export const bookingService = {
         customer: customerResult.data,
         event: eventResult.data
       };
-
+      
       // Initialize SMS sent flag
       let smsSent = false;
-
-      // If SMS is enabled and send_notification is true, send an update notification
-      if (process.env.SMS_ENABLED === 'true' && bookingData.send_notification !== false && updatedBooking) {
+      
+      // If SMS is enabled and we should send notification, send a booking confirmation
+      if (process.env.SMS_ENABLED === 'true' && shouldSendNotification && updatedBooking) {
         try {
           if (updatedBooking.customer && updatedBooking.event) {
-            // Send SMS update notification
+            // Send SMS and wait for the result
             const smsResult = await this.sendConfirmationSMS(
               updatedBooking,
               updatedBooking.customer,
@@ -362,22 +416,11 @@ export const bookingService = {
           // Continue with booking update even if SMS fails
         }
       }
-
-      console.log(`Booking ${id} successfully updated`);
-      return {
-        data: updatedBooking,
-        error: null,
-        smsSent
-      };
+      
+      return { data: updatedBooking, error: null, smsSent };
     } catch (error) {
-      console.error(`Error updating booking with ID ${id}:`, error);
-      return { 
-        data: null, 
-        error: error instanceof Error 
-          ? error 
-          : new Error(`Failed to update booking: ${String(error)}`), 
-        smsSent: false 
-      };
+      console.error(`Error updating booking ${id}:`, error);
+      return { data: null, error: error as Error, smsSent: false };
     }
   },
 

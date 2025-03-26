@@ -55,20 +55,37 @@ export const dashboardService = {
 
       // Get upcoming events - if this fails, we use empty array
       try {
+        // Generate current timestamp in ISO format for the query
+        const now = new Date().toISOString();
+        console.log('Current timestamp for events query:', now);
+        
+        // Query events that start in the future by checking against the combined date and time
         const { data: upcomingEvents, error: eventsError } = await supabase
           .from('events')
           .select('*')
-          .gte('start_time', new Date().toISOString())
+          .or(`start_time.gt.${now},date.gt.${now.split('T')[0]}`)
+          .order('date', { ascending: true })
           .order('start_time', { ascending: true })
           .limit(5);
         
+        console.log('Upcoming events query result:', { data: upcomingEvents, error: eventsError });
+        
         if (eventsError) {
           console.error('Failed to fetch upcoming events:', eventsError);
+          partialStats.upcomingEvents = [];
         } else {
-          partialStats.upcomingEvents = upcomingEvents || [];
+          // Check if the events array is defined
+          if (upcomingEvents === null) {
+            console.warn('Upcoming events query returned null');
+            partialStats.upcomingEvents = [];
+          } else {
+            console.log(`Found ${upcomingEvents.length} upcoming events`);
+            partialStats.upcomingEvents = upcomingEvents;
+          }
         }
       } catch (err) {
         console.error('Error in upcoming events query:', err);
+        partialStats.upcomingEvents = [];
       }
 
       // Get booking counts - if this fails, we use empty stats

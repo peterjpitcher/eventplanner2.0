@@ -9,6 +9,8 @@ import { format } from 'date-fns';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { AppLayout } from '@/components/layout/app-layout';
+import { BookingCard } from '@/components/bookings/booking-card';
+import { formatDateTime } from '@/lib/date-utils';
 
 export default function BookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -62,6 +64,126 @@ export default function BookingsPage() {
     }
   };
 
+  // Function to render bookings content based on whether we have bookings and screen size
+  const renderBookingsContent = () => {
+    if (!bookings.length) {
+      return (
+        <div className="text-center py-10">
+          <svg
+            className="mx-auto h-12 w-12 text-gray-400"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
+            />
+          </svg>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No bookings yet</h3>
+          <p className="mt-1 text-sm text-gray-500">Get started by creating a new booking.</p>
+          <div className="mt-6">
+            <Link href="/bookings/new">
+              <Button>
+                Create New Booking
+              </Button>
+            </Link>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <>
+        {/* Desktop view - Table */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Customer
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Event
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Seats
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Booked On
+                </th>
+                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {bookings.map((booking) => (
+                <tr key={booking.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {booking.customer?.first_name} {booking.customer?.last_name}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {booking.event?.title}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {booking.seats_or_reminder}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {formatDateTime(booking.created_at)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
+                    <Link href={`/events/${booking.event_id}/bookings/${booking.id}`}>
+                      <Button variant="outline" size="sm">
+                        View
+                      </Button>
+                    </Link>
+                    <Link href={`/events/${booking.event_id}/bookings/${booking.id}/edit`}>
+                      <Button variant="outline" size="sm">
+                        Edit
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(booking.id)}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      disabled={deletingBooking === booking.id}
+                    >
+                      {deletingBooking === booking.id ? (
+                        <>
+                          <Spinner size="sm" />
+                          <span className="ml-1">Deleting...</span>
+                        </>
+                      ) : (
+                        'Delete'
+                      )}
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Mobile view - Cards */}
+        <div className="md:hidden px-4 pb-4">
+          {bookings.map(booking => (
+            <BookingCard 
+              key={booking.id} 
+              booking={booking} 
+              onDelete={handleDelete}
+              deletingId={deletingBooking}
+            />
+          ))}
+        </div>
+      </>
+    );
+  };
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -91,7 +213,7 @@ export default function BookingsPage() {
   return (
     <AppLayout>
       <div className="py-6">
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center px-4 md:px-0">
           <h1 className="text-2xl font-semibold text-gray-900">Bookings</h1>
           <Link href="/bookings/new">
             <Button>
@@ -100,107 +222,9 @@ export default function BookingsPage() {
           </Link>
         </div>
         
-        {!bookings.length ? (
-          <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-lg p-6">
-            <div className="text-center py-10">
-              <svg
-                className="mx-auto h-12 w-12 text-gray-400"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
-                />
-              </svg>
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No bookings yet</h3>
-              <p className="mt-1 text-sm text-gray-500">Get started by creating a new booking.</p>
-              <div className="mt-6">
-                <Link href="/bookings/new">
-                  <Button>
-                    Create New Booking
-                  </Button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Customer
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Event
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Seats
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Booked On
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {bookings.map((booking) => (
-                    <tr key={booking.id}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {booking.customer?.first_name} {booking.customer?.last_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {booking.event?.title}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {booking.seats_or_reminder}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {format(new Date(booking.created_at), 'dd/MM/yyyy HH:mm')}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2">
-                        <Link href={`/events/${booking.event_id}/bookings/${booking.id}`}>
-                          <Button variant="outline" size="sm">
-                            View
-                          </Button>
-                        </Link>
-                        <Link href={`/events/${booking.event_id}/bookings/${booking.id}/edit`}>
-                          <Button variant="outline" size="sm">
-                            Edit
-                          </Button>
-                        </Link>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDelete(booking.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                          disabled={deletingBooking === booking.id}
-                        >
-                          {deletingBooking === booking.id ? (
-                            <>
-                              <Spinner size="sm" />
-                              <span className="ml-1">Deleting...</span>
-                            </>
-                          ) : (
-                            'Delete'
-                          )}
-                        </Button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+        <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-lg">
+          {renderBookingsContent()}
+        </div>
       </div>
     </AppLayout>
   );

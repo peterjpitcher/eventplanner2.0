@@ -1,8 +1,8 @@
 import React from 'react';
 import { Event } from '@/services/event-service';
-import { format } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { formatDate, formatDateWithYear, formatTime } from '@/lib/date-utils';
 
 interface EventDetailsProps {
   event: Event;
@@ -20,14 +20,14 @@ export function EventDetails({ event }: EventDetailsProps) {
         <div>
           <h3 className="text-sm font-medium text-gray-500">Date</h3>
           <p className="mt-1 text-sm text-gray-900">
-            {format(new Date(event.date), 'EEEE, MMMM d, yyyy')}
+            {formatDateWithYear(event.date)}
           </p>
         </div>
         
         <div>
           <h3 className="text-sm font-medium text-gray-500">Time</h3>
           <p className="mt-1 text-sm text-gray-900">
-            {format(new Date(`2000-01-01T${event.start_time}`), 'h:mm a')}
+            {formatTime(event.start_time)}
           </p>
         </div>
         

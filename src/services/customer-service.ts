@@ -144,17 +144,28 @@ export const customerService = {
       
       if (bookingsError) {
         console.error(`Error checking related bookings for customer ${id}:`, bookingsError);
-        // Continue with deletion attempt even if we can't check for bookings
-      } else if (relatedBookings && relatedBookings.length > 0) {
-        console.warn(`Customer ${id} has related bookings. Deletion might be restricted by foreign key constraints.`);
-        // We still attempt to delete, the database will enforce constraints
+        // We won't proceed with deletion if we can't check for related bookings
+        throw bookingsError;
+      } 
+      
+      if (relatedBookings && relatedBookings.length > 0) {
+        console.warn(`Customer ${id} has related bookings. Deletion will be rejected due to foreign key constraints.`);
+        return {
+          data: null,
+          error: new Error('Cannot delete customer with existing bookings. Please delete all bookings for this customer first.')
+        };
       }
       
-      // Perform the actual deletion
-      const { error: deleteError } = await supabase
+      // Perform the actual deletion with explicit return values
+      const { error: deleteError, count } = await supabase
         .from(CUSTOMERS_TABLE)
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .then(res => ({
+          error: res.error,
+          count: res.data ? res.data.length : 0
+        }));
       
       if (deleteError) {
         console.error(`Error during customer deletion for ID ${id}:`, deleteError);
@@ -168,6 +179,14 @@ export const customerService = {
         }
         
         throw deleteError;
+      }
+      
+      if (count === 0) {
+        console.warn(`No customer was deleted with ID ${id}`);
+        return {
+          data: null,
+          error: new Error(`Customer with ID ${id} was not deleted. Verify the customer exists.`)
+        };
       }
       
       console.log(`Successfully deleted customer with ID: ${id}`);

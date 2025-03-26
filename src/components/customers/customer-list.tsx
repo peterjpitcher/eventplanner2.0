@@ -24,25 +24,25 @@ export function CustomerList({ customers: initialCustomers, onCustomerDeleted }:
       setIsDeleting(id);
       setDeleteError(null);
       
-      // Optimistic UI update - remove the customer immediately
-      const previousCustomers = [...customers];
+      // Find the customer to delete
       const customerToDelete = customers.find(c => c.id === id);
       const customerName = customerToDelete 
         ? `${customerToDelete.first_name} ${customerToDelete.last_name}`.trim() 
         : 'Customer';
       
-      // Filter out the customer to be deleted
-      setCustomers(customers.filter(customer => customer.id !== id));
-      
       try {
+        // Call the service to delete the customer (don't do optimistic UI update)
         const { error } = await customerService.deleteCustomer(id);
         
         if (error) {
           throw error;
         }
         
-        // Delete was successful
+        // Delete was successful, now update the UI
         toast.success(`${customerName} has been deleted`);
+        
+        // Update the customer list to remove the deleted customer
+        setCustomers(customers.filter(customer => customer.id !== id));
         
         // Notify parent component about the deletion
         if (onCustomerDeleted) {
@@ -51,13 +51,16 @@ export function CustomerList({ customers: initialCustomers, onCustomerDeleted }:
       } catch (error: any) {
         console.error('Error deleting customer:', error);
         
-        // Revert the optimistic update on failure
-        setCustomers(previousCustomers);
-        
         // Show error message
         const errorMessage = error.message || 'Unknown error';
         setDeleteError(`Failed to delete customer: ${errorMessage}`);
-        toast.error(`Failed to delete customer: ${errorMessage}`);
+        
+        // Show toast with more specific message
+        if (errorMessage.includes('existing bookings')) {
+          toast.error(`Cannot delete ${customerName}: This customer has existing bookings. Please delete the bookings first.`);
+        } else {
+          toast.error(`Failed to delete ${customerName}: ${errorMessage}`);
+        }
       } finally {
         setIsDeleting(null);
       }

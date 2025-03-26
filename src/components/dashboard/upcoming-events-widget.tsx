@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { format, parseISO } from 'date-fns';
 import Link from 'next/link';
 import { Spinner } from '../ui/spinner';
 import { CalendarIcon, UsersIcon, MapPinIcon } from 'lucide-react';
+import { formatDate, formatTime, formatDateAndTime } from '@/lib/date-utils';
 
 interface Event {
   id: string;
@@ -48,17 +48,6 @@ export function UpcomingEventsWidget({ events, isLoading }: UpcomingEventsWidget
     );
   }
 
-  const formatEventDateTime = (date: string, time: string) => {
-    try {
-      // Try to parse the combined date and time
-      const dateTime = parseISO(`${date}T${time}`);
-      return format(dateTime, 'EEEE, do MMMM yyyy - HH:mm');
-    } catch (error) {
-      // Fallback in case of parsing error
-      return `${date} ${time}`;
-    }
-  };
-
   return (
     <div className="divide-y divide-gray-200">
       {events.map((event) => (
@@ -69,7 +58,7 @@ export function UpcomingEventsWidget({ events, isLoading }: UpcomingEventsWidget
             <div className="mt-2 flex flex-col space-y-2 text-sm text-gray-500">
               <div className="flex items-center">
                 <CalendarIcon className="mr-2 h-4 w-4 text-gray-400" />
-                <span>{formatEventDateTime(event.date, event.start_time)}</span>
+                <span>{formatDateAndTime(event.date, event.start_time)}</span>
               </div>
               
               {event.venue && (

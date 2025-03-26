@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Event } from '@/services/event-service';
-import { formatDateTime } from '@/lib/date-utils';
+import { formatDate, formatTime } from '@/lib/date-utils';
 import { Badge } from '../ui/badge';
 
 interface EventListProps {
@@ -83,10 +83,10 @@ export function EventList({ events }: EventListProps) {
                 {event.category_name || '-'}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {event.date}
+                {formatDate(event.date)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {event.start_time}
+                {formatTime(event.start_time)}
               </td>
               <td className="px-6 py-4 whitespace-nowrap">
                 {event.is_canceled ? (
