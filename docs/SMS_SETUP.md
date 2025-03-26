@@ -1,164 +1,162 @@
-# SMS Setup and Usage Guide
+# SMS Integration Setup Guide
 
 ## Overview
 
-The Event Planner 2.0 application includes SMS notification capabilities that allow you to automatically send text messages to customers for booking confirmations, cancellations, reminders, and other communications. This guide explains how to set up and use this functionality.
+The Event Planner application now includes SMS notification capabilities for:
 
-## Configuration
+1. Booking confirmations - sent when a new booking is created
+2. Cancellation notifications - sent when a booking is deleted or an event is cancelled
+3. Automated reminders - sent 7 days and 24 hours before events
 
-### Environment Variables
+This document provides instructions for setting up and configuring the SMS functionality.
 
-To enable SMS functionality, you need to set the following environment variables:
+## Prerequisites
+
+- Access to the application's environment variables
+- Twilio account (for production use) with:
+  - Account SID
+  - Auth Token
+  - Twilio phone number
+
+## Environment Configuration
+
+Add the following environment variables to your `.env` file:
 
 ```
-NEXT_PUBLIC_SMS_ENABLED=true
-NEXT_PUBLIC_LOG_LEVEL=info
+# SMS Configuration
+SMS_PROVIDER=mockSms  # Options: mockSms, twilio
+SMS_ENABLED=true      # Set to false to disable SMS completely
+SMS_DEFAULT_COUNTRY_CODE=44  # Default country code (without +)
+MOCK_SMS_DELAY=2000   # Delay in ms for mock SMS (for testing)
+
+# Twilio Configuration (only needed if SMS_PROVIDER=twilio)
+TWILIO_ACCOUNT_SID=your_account_sid
+TWILIO_AUTH_TOKEN=your_auth_token
+TWILIO_FROM_NUMBER=your_twilio_phone_number
+
+# API Authentication for Automated Reminders
+API_AUTH_TOKEN=your_secure_token  # Used to authenticate the reminder API
+SKIP_API_AUTH=false  # Set to true in development for testing
 ```
 
-For production deployments using real SMS providers, you'll need additional credentials:
+## Providers
 
-```
-TWILIO_ACCOUNT_SID=your_twilio_account_sid
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_PHONE_NUMBER=your_twilio_phone_number
-```
+The system supports multiple SMS providers:
 
-### Database Setup
+### Mock Provider (Development)
 
-Make sure your Supabase database has the `sms_messages` table with the following structure:
+- Simulates SMS sending for testing purposes
+- Logs messages to the console
+- Configurable delay to simulate network latency
+- Always available in development environments
 
-```sql
-CREATE TABLE sms_messages (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  booking_id UUID REFERENCES bookings(id) ON DELETE CASCADE,
-  message_type TEXT NOT NULL,
-  message TEXT NOT NULL,
-  recipient TEXT NOT NULL,
-  status TEXT NOT NULL,
-  sent_at TIMESTAMP WITH TIME ZONE DEFAULT now(),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-);
-```
+### Twilio Provider (Production)
 
-Also, create the SQL functions for SMS analytics:
+- Uses Twilio's SMS API to send real messages
+- Requires valid Twilio credentials
+- Supports international numbers with proper formatting
+- Recommended for production environments
 
-```sql
-CREATE OR REPLACE FUNCTION get_sms_counts_by_status()
-RETURNS TABLE (status TEXT, count BIGINT) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT sm.status, COUNT(sm.id)::BIGINT
-  FROM sms_messages sm
-  GROUP BY sm.status;
-END;
-$$ LANGUAGE plpgsql;
+## Message Types
 
-CREATE OR REPLACE FUNCTION get_sms_counts_by_type()
-RETURNS TABLE (message_type TEXT, count BIGINT) AS $$
-BEGIN
-  RETURN QUERY
-  SELECT sm.message_type, COUNT(sm.id)::BIGINT
-  FROM sms_messages sm
-  GROUP BY sm.message_type;
-END;
-$$ LANGUAGE plpgsql;
-```
+The system supports the following types of SMS messages:
 
-## Using SMS Features
+1. **Booking Confirmations**
+   - Sent automatically when a new booking is created
+   - Can be toggled by the user during booking creation
+   - Includes event details, date, time, and seats reserved
 
-### Booking Confirmations
+2. **Cancellation Notifications**
+   - **Booking Cancellations**: Sent when a booking is deleted (optional)
+   - **Event Cancellations**: Sent to all customers with bookings when an event is cancelled (optional)
+   - Includes information about the cancelled booking/event
 
-When creating a new booking through the booking form:
+3. **Automated Reminders**
+   - **7-day Reminders**: Sent 7 days before the event date
+   - **24-hour Reminders**: Sent 24 hours before the event date
+   - Processed automatically via scheduled job
+   - Can also be sent manually for individual bookings
 
-1. Fill in the booking details (customer, event, seats)
-2. Check the "Send SMS confirmation" checkbox if you want the customer to receive an SMS
-3. Submit the form
-4. The system will automatically send an SMS if the customer has a valid mobile number
+## Automated Reminder Setup
 
-### Viewing SMS Status
+The system includes an automated reminder feature that sends SMS notifications to customers before their booked events:
 
-On the booking details page:
+### Reminder Types
 
-1. Navigate to the "SMS Confirmation" section
-2. View the current status (Sent, Failed, Not Sent, or Pending)
-3. See when the SMS was sent (if applicable)
-4. Use the "Resend SMS" button to send another confirmation if needed
+1. **7-day Reminder**
+   - Sent 7 days before the event
+   - Provides an early reminder to help customers plan
 
-### Cancellation Notifications
+2. **24-hour Reminder**
+   - Sent 24 hours before the event (the day before)
+   - Serves as a final reminder
 
-#### For Individual Bookings
+### Setting Up the Scheduled Job
 
-When deleting a booking:
+Reminders are processed automatically using a GitHub Actions workflow:
 
-1. Click the "Delete" button on the booking detail page
-2. In the confirmation dialog, you'll see an option to "Send cancellation SMS to customer"
-3. If checked, a cancellation notification will be sent when the booking is deleted
-4. You'll receive feedback on whether the SMS was sent successfully
+1. **Workflow Configuration**
+   - Located at `.github/workflows/process-reminders.yml`
+   - Runs daily at 8:00 AM UTC
+   - Can also be triggered manually via GitHub Actions UI
 
-#### For Entire Events
+2. **Repository Secrets**
+   - Add the following secrets to your GitHub repository:
+     - `API_AUTH_TOKEN`: The same token specified in your environment
+     - `API_BASE_URL`: The base URL of your deployed application
 
-When cancelling an event:
+3. **API Authentication**
+   - The workflow uses token authentication to call the reminder processing API
+   - Ensure the `API_AUTH_TOKEN` matches between your application and GitHub secrets
 
-1. Click the "Cancel Event" button on the event detail page
-2. In the cancellation dialog, you'll see an option to "Send cancellation SMS to all customers who booked this event"
-3. If checked, cancellation messages will be sent to all affected customers
-4. After cancellation, you'll see a summary showing the total number of messages, how many were sent successfully, and how many failed
+### Manual Reminder Testing
 
-### SMS Status Icons
+To test the reminder system without waiting for the scheduled job:
 
-The application uses the following status indicators:
+1. Trigger the workflow manually via GitHub Actions
+2. Or call the API endpoint directly:
+   ```bash
+   curl -X POST https://your-app-url/api/reminders/process \
+     -H "Authorization: Bearer your_api_auth_token" \
+     -H "Content-Type: application/json"
+   ```
 
-- ✅ **Sent**: SMS was successfully delivered
-- ❌ **Failed**: SMS delivery failed
-- ⏱️ **Pending**: SMS is currently being processed
-- ⚪ **Not Sent**: No SMS has been sent for this booking
+### Sending Manual Reminders
+
+Staff can also send manual reminders for individual bookings:
+
+1. Go to the booking details page
+2. Find the "Reminders" section
+3. Click "Send Reminder"
+4. Select the reminder type (7-day or 24-hour)
+5. Confirm sending the reminder
 
 ## Troubleshooting
 
 ### SMS Not Being Sent
 
-If SMS messages are not being sent:
-
-1. Check that `NEXT_PUBLIC_SMS_ENABLED` is set to `true`
-2. Verify that the customer has a valid mobile number
-3. Ensure the Twilio credentials are correct (in production mode)
-4. Check the application logs for any SMS-related errors
+1. Check that `SMS_ENABLED` is set to `true`
+2. Verify the customer has a valid mobile number
+3. Ensure your SMS provider configuration is correct
+4. Check application logs for detailed error messages
 
 ### Invalid Mobile Numbers
 
-The system attempts to format mobile numbers according to E.164 standards. If customers' numbers are not in a compatible format:
+The system attempts to format mobile numbers by:
 
-1. Edit the customer's profile
-2. Update their mobile number to include the country code (e.g., +44 for UK)
-3. Try sending the SMS again
+1. Adding the default country code if missing
+2. Removing spaces and special characters
+3. Ensuring the number starts with a "+" symbol
 
-## Development and Testing
+If numbers are still not formatted correctly, ensure they are entered in a standard format.
 
-During development, the system simulates SMS sending without actually sending real text messages. This allows you to test the functionality without incurring SMS charges.
+## SMS Status Icons
 
-To view simulated SMS messages:
+The application uses the following status indicators:
 
-1. Check the console logs (they will include "[SIMULATED] Sending SMS to..." messages)
-2. Look at the `sms_messages` table in your database to see the logged messages
+- ✅ **Sent**: The message was successfully delivered
+- ❌ **Failed**: The message failed to send
+- ⏳ **Pending**: The message is being processed
+- ⚪ **Not Sent**: No message has been sent yet
 
-## Integration with Real SMS Providers
-
-This guide covers the default simulated SMS sending. To integrate with a real SMS provider (Twilio):
-
-1. Sign up for a Twilio account and get your credentials
-2. Update the environment variables with your Twilio details
-3. Implement the Twilio API calls in the `sendSMS` function in `lib/sms-utils.ts`
-
-## SMS Message Types
-
-The system supports different types of SMS messages:
-
-1. **Booking Confirmation** (`booking_confirmation`): Sent when a booking is created or updated
-2. **Booking Cancellation** (`booking_cancellation`): Sent when a booking is deleted
-3. **Event Cancellation** (`event_cancellation`): Sent to all customers when an event is cancelled
-4. **7-day Reminder** (`reminder_7day`): Scheduled to be sent 7 days before an event (coming soon)
-5. **24-hour Reminder** (`reminder_24hr`): Scheduled to be sent 24 hours before an event (coming soon)
-
-## SMS Templates
-
-Currently, SMS messages use a fixed template with placeholders for customer and event details. Future versions will include a template management system to customize the messages. 
+These indicators appear throughout the UI to show the status of various SMS notifications. 

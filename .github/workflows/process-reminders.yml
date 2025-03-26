@@ -1,0 +1,61 @@
+name: Process Event Reminders
+
+on:
+  schedule:
+    # Run daily at 8:00 AM UTC
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+    # Allow manual triggering of the workflow
+
+jobs:
+  process-reminders:
+    name: Process Event Reminders
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Process 7-day and 24-hour reminders
+        env:
+          API_AUTH_TOKEN: ${{ secrets.API_AUTH_TOKEN }}
+          API_BASE_URL: ${{ secrets.API_BASE_URL }}
+        run: |
+          echo "Processing reminders at $(date)"
+          
+          # Construct the API URL
+          API_URL="${API_BASE_URL}/api/reminders/process"
+          
+          # Make the API call to process reminders
+          RESPONSE=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer ${API_AUTH_TOKEN}" \
+            "$API_URL")
+          
+          # Output response (excluding any sensitive information)
+          echo "Response received:"
+          echo "$RESPONSE" | jq 'del(.results[] | .details)' || echo "$RESPONSE"
+          
+          # Check for success in the response
+          SUCCESS=$(echo "$RESPONSE" | jq -r '.success // false')
+          
+          if [ "$SUCCESS" != "true" ]; then
+            echo "Error processing reminders. See logs for details."
+            exit 1
+          fi
+          
+          echo "Reminder processing complete"
+      
+      - name: Send notification on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const issue = await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: '🚨 Reminder processing failed',
+              body: `The reminder processing job failed on ${new Date().toISOString()}.
+
+              Please check the [workflow run](https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}) for details.`
+            });
+            
+            console.log(`Created issue #${issue.data.number}`); 

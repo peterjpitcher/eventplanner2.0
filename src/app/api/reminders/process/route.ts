@@ -1,24 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { reminderService } from '@/services/reminder-service';
+import { createLogger } from '@/lib/logger';
+import { validateApiAuthToken } from '@/lib/api-auth';
+
+const logger = createLogger('reminders-api');
 
 /**
  * Process pending reminders - both 7-day and 24-hour
  * This endpoint is designed to be called by a scheduled task/cron job
  */
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
-    // Check for API key authorization (in a production app, you'd validate an API key here)
+    // Validate API token
     const authHeader = req.headers.get('authorization');
-    
-    // Simple key validation - in production, use a secure method
-    // Extract API key from "Bearer <key>"
-    const apiKey = process.env.REMINDER_API_KEY;
-    const providedKey = authHeader?.replace('Bearer ', '');
-    
-    // Skip validation in development mode if configured
-    const skipAuth = process.env.NODE_ENV === 'development' && process.env.SKIP_REMINDER_AUTH === 'true';
-    
-    if (!skipAuth && (!apiKey || !providedKey || apiKey !== providedKey)) {
+    if (!validateApiAuthToken(authHeader)) {
+      logger.warn('Unauthorized reminder processing attempt');
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -26,25 +22,43 @@ export async function POST(req: NextRequest) {
     }
 
     // Process reminders
+    logger.info('Starting scheduled reminder processing');
     const result = await reminderService.processReminders();
 
-    if (!result.success) {
+    if (result.success) {
+      const summary = result.results.map(r => ({
+        type: r.type,
+        processed: r.processed,
+        sent: r.sent,
+        failed: r.failed,
+        skipped: r.skipped,
+      }));
+
+      logger.info('Reminder processing complete', { summary });
+      return NextResponse.json({
+        success: true,
+        results: summary,
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      logger.error('Error during reminder processing:', result.error);
       return NextResponse.json(
-        { error: 'Failed to process reminders', details: result.error },
+        { 
+          success: false, 
+          error: 'Error processing reminders',
+          details: result.error?.message || 'Unknown error'
+        },
         { status: 500 }
       );
     }
-
-    return NextResponse.json({
-      success: true,
-      processed: result.processed,
-      skipped: result.skipped,
-      failed: result.failed
-    });
-  } catch (error) {
-    console.error('Unexpected error processing reminders:', error);
+  } catch (error: any) {
+    logger.error('Unexpected error in reminder processing endpoint:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { 
+        success: false, 
+        error: 'Unexpected error while processing reminders',
+        details: error?.message || 'Unknown error'
+      },
       { status: 500 }
     );
   }

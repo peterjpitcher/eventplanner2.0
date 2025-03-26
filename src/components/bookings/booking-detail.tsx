@@ -1,10 +1,10 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Booking, BookingFormData, bookingService } from '@/services/booking-service';
 import { Customer } from '@/types';
 import { Event } from '@/services/event-service';
-import { format } from 'date-fns';
+import { format, parseISO, isBefore, addDays } from 'date-fns';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
 import { SMSStatus } from './sms-status';
@@ -12,7 +12,8 @@ import { smsService } from '@/services/sms-service';
 import { BookingForm } from './booking-form';
 import { Dialog } from '@/components/ui/dialog';
 import { Spinner } from '../ui/spinner';
-import { MessageCircle } from 'lucide-react';
+import { MessageCircle, Bell, AlertTriangle } from 'lucide-react';
+import { reminderService } from '@/services/reminder-service';
 
 interface SMSMessage {
   id: string;
@@ -39,6 +40,16 @@ export function BookingDetail({ booking, eventName, customerName, onRefresh, sms
   const [sendSMSOnDelete, setSendSMSOnDelete] = useState(true);
   const [isSendingSMS, setIsSendingSMS] = useState(false);
   const [smsSent, setSmsSent] = useState<boolean>(false);
+  const [reminderStatus, setReminderStatus] = useState<{
+    reminder_7day: { sent: boolean; sentAt?: string };
+    reminder_24hr: { sent: boolean; sentAt?: string };
+  }>({
+    reminder_7day: { sent: false },
+    reminder_24hr: { sent: false }
+  });
+  const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [sendingReminder, setSendingReminder] = useState(false);
+  const [selectedReminderType, setSelectedReminderType] = useState<string>('reminder_24hr');
   
   // Get the most recent confirmation SMS, if any
   const lastConfirmationSMS = smsMessages
@@ -48,6 +59,22 @@ export function BookingDetail({ booking, eventName, customerName, onRefresh, sms
   const smsStatus = lastConfirmationSMS 
     ? lastConfirmationSMS.status === 'sent' ? 'sent' : 'failed'
     : null;
+    
+  // Check if the event has already occurred
+  const isEventInPast = booking.event?.date ? 
+    isBefore(parseISO(booking.event.date), new Date()) : false;
+    
+  useEffect(() => {
+    // Fetch reminder status when the component loads
+    async function fetchReminderStatus() {
+      if (booking.id) {
+        const status = await reminderService.getReminderStatus(booking.id);
+        setReminderStatus(status);
+      }
+    }
+    
+    fetchReminderStatus();
+  }, [booking.id]);
 
   const handleUpdate = async (formData: BookingFormData) => {
     setIsSubmitting(true);
@@ -133,6 +160,48 @@ export function BookingDetail({ booking, eventName, customerName, onRefresh, sms
       toast.error('Failed to send SMS confirmation');
     } finally {
       setIsSendingSMS(false);
+    }
+  };
+
+  const handleSendReminder = async () => {
+    if (!booking.id) {
+      toast.error('Booking ID is missing');
+      return;
+    }
+    
+    if (isEventInPast) {
+      toast.error('Cannot send reminders for past events');
+      setShowReminderDialog(false);
+      return;
+    }
+    
+    setSendingReminder(true);
+    
+    try {
+      const result = await reminderService.sendManualReminder(
+        booking.id,
+        selectedReminderType
+      );
+      
+      if (result.success) {
+        toast.success('Reminder sent successfully');
+        setShowReminderDialog(false);
+        
+        // Update reminder status
+        const newStatus = await reminderService.getReminderStatus(booking.id);
+        setReminderStatus(newStatus);
+        
+        if (onRefresh) {
+          onRefresh();
+        }
+      } else {
+        toast.error(`Failed to send reminder: ${result.error?.message || 'Unknown error'}`);
+      }
+    } catch (error: any) {
+      console.error('Error sending reminder:', error);
+      toast.error(`Failed to send reminder: ${error.message || 'Unknown error'}`);
+    } finally {
+      setSendingReminder(false);
     }
   };
 
@@ -248,6 +317,66 @@ export function BookingDetail({ booking, eventName, customerName, onRefresh, sms
               </div>
             </dd>
           </div>
+          
+          {/* Add reminder information */}
+          <div className="sm:col-span-2 border-t pt-4">
+            <dt className="text-sm font-medium text-gray-500">Reminders</dt>
+            <dd className="mt-1 text-sm text-gray-900">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 my-2">
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                  <div>
+                    <span className="font-medium">7-day Reminder</span>
+                    <div className="flex items-center mt-1">
+                      <SMSStatus 
+                        status={reminderStatus.reminder_7day.sent ? 'sent' : null} 
+                        showLabel={true}
+                      />
+                      {reminderStatus.reminder_7day.sentAt && (
+                        <span className="ml-2 text-gray-500 text-xs">
+                          {format(new Date(reminderStatus.reminder_7day.sentAt), 'PPp')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center p-3 bg-gray-50 rounded-md">
+                  <div>
+                    <span className="font-medium">24-hour Reminder</span>
+                    <div className="flex items-center mt-1">
+                      <SMSStatus 
+                        status={reminderStatus.reminder_24hr.sent ? 'sent' : null} 
+                        showLabel={true}
+                      />
+                      {reminderStatus.reminder_24hr.sentAt && (
+                        <span className="ml-2 text-gray-500 text-xs">
+                          {format(new Date(reminderStatus.reminder_24hr.sentAt), 'PPp')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="mt-3 flex justify-end">
+                <Button
+                  onClick={() => setShowReminderDialog(true)}
+                  disabled={isEventInPast}
+                  size="sm"
+                >
+                  <Bell className="h-4 w-4 mr-2" />
+                  Send Reminder
+                </Button>
+              </div>
+              
+              {isEventInPast && (
+                <div className="mt-2 flex items-start space-x-2 text-amber-600 text-xs">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <span>This event has already passed. Reminders cannot be sent.</span>
+                </div>
+              )}
+            </dd>
+          </div>
         </dl>
       </div>
       
@@ -294,6 +423,63 @@ export function BookingDetail({ booking, eventName, customerName, onRefresh, sms
                   </>
                 ) : (
                   'Delete Booking'
+                )}
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+      )}
+      
+      {/* Send reminder dialog */}
+      {showReminderDialog && (
+        <Dialog
+          open={showReminderDialog}
+          title="Send Reminder"
+          onClose={() => setShowReminderDialog(false)}
+        >
+          <div className="p-6">
+            <p className="mb-4">Send a reminder SMS to the customer about their booking.</p>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Reminder Type
+              </label>
+              <select
+                value={selectedReminderType}
+                onChange={(e) => setSelectedReminderType(e.target.value)}
+                className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md"
+              >
+                <option value="reminder_24hr">24-hour Reminder</option>
+                <option value="reminder_7day">7-day Reminder</option>
+              </select>
+              
+              {reminderStatus[selectedReminderType as keyof typeof reminderStatus]?.sent && (
+                <div className="mt-2 flex items-start space-x-2 text-amber-600 text-xs">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+                  <span>This reminder has already been sent. Sending again will deliver another message to the customer.</span>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <Button
+                variant="outline"
+                onClick={() => setShowReminderDialog(false)}
+                disabled={sendingReminder}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSendReminder}
+                disabled={sendingReminder}
+              >
+                {sendingReminder ? (
+                  <>
+                    <Spinner size="sm" className="mr-2" />
+                    Sending...
+                  </>
+                ) : (
+                  'Send Reminder'
                 )}
               </Button>
             </div>
