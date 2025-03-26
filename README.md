@@ -1,127 +1,79 @@
-# Event Planner
+# Event Planner 2.0
 
-A comprehensive web application for managing pub events, customer registrations, bookings, and automated SMS notifications.
+A comprehensive event management system for organizing events, managing bookings, and sending automated notifications.
 
 ## Features
 
-- **Customer Management**: Register and manage customer details
-- **Event Categories**: Organise events into categories
-- **Event Management**: Create, edit and manage pub events
-- **Booking Management**: Handle customer bookings for events
-- **SMS Notifications**: Automated SMS reminders and confirmations
-- **SMS Reply Handling**: Process customer responses to SMS messages
-- **Dashboard & Reporting**: View insights and statistics
-
-## Tech Stack
-
-- **Frontend**: Next.js 14 with App Router, TypeScript, and Tailwind CSS
-- **Backend**: Supabase (Authentication, PostgreSQL Database, Storage)
-- **Communication**: Twilio SMS API
-- **Deployment**: Vercel
+- **Event Management**: Create, edit, and manage events with detailed information
+- **Booking System**: Track attendees and manage bookings
+- **Customer Database**: Maintain customer information
+- **SMS Notifications**: Send automated confirmations and reminders via Twilio
+- **Template Management**: Customize notification templates
+- **Responsive Design**: Mobile-friendly interface for on-the-go management
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18.17.0 or later
-- npm or yarn
-- Supabase account
-- Twilio account (for SMS features)
+- Node.js 18+ and npm
+- Supabase account for database and authentication
+- Twilio account for SMS functionality (optional)
 
 ### Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/peterjpitcher/eventplanner2.0.git
-   cd eventplanner2.0
-   ```
-
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Set up environment variables:
-   ```bash
-   cp .env.local.example .env.local
-   ```
-   Then fill in the required values in `.env.local`
-
-4. Run the development server:
-   ```bash
-   npm run dev
-   ```
-
-5. Open [http://localhost:3000](http://localhost:3000) in your browser to see the application.
-
-## Project Structure
-
+1. Clone the repository
+```bash
+git clone https://github.com/yourusername/event-planner.git
+cd event-planner
 ```
-event-planner/
-├── src/
-│   ├── app/               # Next.js App Router pages
-│   ├── components/        # Reusable UI components
-│   ├── contexts/          # React contexts for state management
-│   ├── hooks/             # Custom React hooks
-│   ├── lib/               # Utility functions and libraries
-│   ├── types/             # TypeScript type definitions
-│   └── utils/             # Helper functions
-├── public/                # Static assets
-├── docs/                  # Project documentation
-└── .github/               # GitHub configuration files
+
+2. Install dependencies
+```bash
+npm install
 ```
+
+3. Set up environment variables by copying the example file
+```bash
+cp .env.example .env.local
+```
+
+4. Update the `.env.local` file with your Supabase and Twilio credentials
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=your_twilio_phone_number
+SMS_ENABLED=true
+```
+
+5. Start the development server
+```bash
+npm run dev
+```
+
+6. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+## Current Status and Known Issues
+
+Please refer to our [Implementation Plan V1.4](docs/IMPLEMENTATION_PLAN_V1.4.md) for details about current status and upcoming fixes. Key known issues include:
+
+1. Customer deletion issues
+2. Dashboard upcoming events not displaying
+3. Category deletion issues
+4. Navigation structure inconsistencies
+5. SMS notification triggering problems
 
 ## Documentation
 
-Comprehensive documentation is available in the `docs/` directory:
+Comprehensive documentation is available in the `docs` directory:
 
-- [Architecture Overview](docs/ARCHITECTURE.md)
-- [Authentication Flow](docs/AUTHENTICATION.md)
-- [Booking Management](docs/BOOKING_MANAGEMENT.md)
-- [Changelog](docs/CHANGELOG.md)
-- [Customer Management](docs/CUSTOMER_MANAGEMENT.md)
-- [Database Schema](docs/DATABASE_SCHEMA.md)
-- [Database Setup](docs/DATABASE_SETUP.sql)
-- [Deployment Guide](docs/DEPLOYMENT.md)
-- [Development Notes](docs/DEVELOPMENT_NOTES.md)
-- [Development Workflow](docs/DEVELOPMENT_WORKFLOW.md)
-- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
-- [Mobile Functionality](docs/MOBILE_FUNCTIONALITY.md)
-- [Mobile Optimization](docs/MOBILE_OPTIMIZATION.md)
-- [Navigation Components](docs/NAVIGATION.md)
-- [Project Decisions](docs/DECISIONS.md)
-- [SMS Integration](docs/SMS_INTEGRATION.md)
+- [Project Overview](docs/PROJECT_OVERVIEW.md) - High-level overview of the project
+- [Handover Documentation](docs/HANDOVER.md) - Detailed technical documentation
+- [Implementation Plan V1.4](docs/IMPLEMENTATION_PLAN_V1.4.md) - Current development plan
+- [SMS Setup Guide](docs/SMS_SETUP.md) - Twilio integration instructions
 
-Additional documentation is available in subdirectories:
-- [API Documentation](docs/api/)
-- [Architecture Details](docs/architecture/)
-- [Setup Guides](docs/setup/)
-- [Testing Documentation](docs/testing/)
-- [User Guides](docs/user-guides/)
-- [Workflow Guides](docs/workflows/)
-
-## Project Status
-
-- ✅ Phase 1: Project Setup
-- ✅ Phase 2: Authentication
-- ✅ Phase 3: Database Schema
-- ✅ Phase 4: User Management
-- ✅ Phase 5: Event Management
-- ✅ Phase 6: Booking System
-- ✅ Phase 7: SMS Integration - Setup
-- ✅ Phase 8: Booking Confirmations
-- ✅ Phase 9: SMS Reminders
-- ⬜ Phase 10: Notification Preferences
-
-## Contributing
-
-Please read [CONTRIBUTING.md](.github/CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-# SMS Templates
+## SMS Templates
 
 The application includes a template management system for SMS messages. This allows you to customize the content of messages sent for different events, such as:
 
@@ -153,4 +105,16 @@ TWILIO_PHONE_NUMBER=your_twilio_phone_number
 SMS_ENABLED=true
 ```
 
-When deployed to Vercel, add these as environment variables in your project settings. 
+When deployed to Vercel, add these as environment variables in your project settings.
+
+## Built With
+
+- [Next.js](https://nextjs.org/) - React framework
+- [TypeScript](https://www.typescriptlang.org/) - Typed JavaScript
+- [Tailwind CSS](https://tailwindcss.com/) - Utility-first CSS framework
+- [Supabase](https://supabase.io/) - Open source Firebase alternative
+- [Twilio](https://www.twilio.com/) - Communication APIs
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. 

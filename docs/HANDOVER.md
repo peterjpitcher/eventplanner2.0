@@ -8,6 +8,7 @@
    - Event listing and viewing
    - Event form with validation
    - Event category integration
+   - Mobile-friendly event cards
 
 2. Category Management
    - Category creation and editing
@@ -21,96 +22,138 @@
    - Protected routes
    - Session management
 
-4. UI Components
+4. Booking Management
+   - Booking creation and editing
+   - Booking listing and viewing
+   - Booking cancellation
+   - SMS notifications (with Twilio integration)
+   - Mobile-friendly booking cards
+
+5. Customer Management
+   - Customer creation and editing
+   - Customer listing and viewing
+   - Customer deletion
+   - Mobile number validation
+   - Mobile-friendly customer cards
+
+6. SMS Functionality
+   - Twilio integration
+   - Automated booking confirmations
+   - SMS template management
+   - Message history tracking
+
+7. UI Components
    - Form components
    - Button components
    - Input components
    - Alert components
    - Loading states
    - Error handling
+   - Mobile-responsive layouts
+   - Card components for mobile displays
 
-5. Infrastructure Setup
+8. Infrastructure Setup
    - App routing configuration
    - Supabase integration
    - Mobile-responsive layout components
    - Base API layer
+   - Environment variable configuration
 
-### Production Issues Identified
-1. **Routing Issues**
-   - Duplicate routes between (dashboard) route group and regular routes
-   - 404 errors when accessing various features
-   - Conflict between parallel routes
+### Known Issues
+1. **Customer Deletion Issue**
+   - Error message appears even when database deletion succeeds
+   - Console error: "Customer with ID X was not deleted. Verify the customer exists"
 
-2. **Dashboard**
-   - Missing graphs and charts
-   - Only displays navigation buttons to sections
-   - Lacks data visualization components
+2. **Dashboard Upcoming Events**
+   - Events are not displaying on the dashboard
+   - Query logic for upcoming events isn't filtering correctly
 
-3. **Customer Management**
-   - 404 errors when creating, viewing, or editing customers
-   - Delete function prompts but doesn't execute
+3. **Category Deletion Issue**
+   - Categories cannot be deleted
+   - May be related to similar DELETE operation issues as customer deletion
 
-4. **Category Management**
-   - 404 errors when trying to access category pages
+4. **Navigation Issues**
+   - Category item still appearing in left navigation despite being removed previously
+   - Messages appearing in the left navigation when it should be accessed via SMS Templates page
 
-5. **Events Management**
-   - 404 errors when trying to access event pages
+5. **SMS Functionality**
+   - Booking creation isn't triggering SMS notifications
+   - SMS settings configured but not being properly applied
 
-6. **Booking Management**
-   - Page loads, but creating a booking just reloads the page
-   - Viewing and submitting edits result in 404 errors
+6. **SMS Templates Management**
+   - Needs a "Test Message" button to verify templates work
 
 ## Next Steps
 
 ### Implementation Plan
-A comprehensive implementation plan has been created to address all issues. Refer to `docs/IMPLEMENTATION_PLAN_V1.1.md` for details.
+A comprehensive implementation plan has been created to address all issues. Refer to `docs/IMPLEMENTATION_PLAN_V1.4.md` for details. The plan outlines six phases:
+
+1. **Fix Customer Deletion** (Critical)
+   - Investigate and fix Supabase DELETE operation response handling
+   - Update the customer service to correctly handle successful deletions
+
+2. **Fix Dashboard Upcoming Events** (High Priority)
+   - Refactor the events query to use simpler, more reliable filtering
+   - Implement proper date/time handling for upcoming events
+
+3. **Fix Category Deletion** (High Priority)
+   - Similar approach to customer deletion fix
+   - Improve foreign key constraint checking and error messaging
+
+4. **Fix Navigation Issues** (Medium Priority)
+   - Remove Categories and Messages from sidebar navigation
+   - Add Messages button to SMS Templates page
+
+5. **Fix SMS Notifications** (Critical)
+   - Debug SMS sending process
+   - Ensure environment variables are properly loaded
+   - Add comprehensive logging
+
+6. **Enhance SMS Templates Management** (Medium Priority)
+   - Add test message feature
+   - Improve template editing with syntax highlighting
+   - Add validation for required placeholders
 
 ### Immediate Tasks (Priority Order)
-1. **Fix Routing Structure**
-   - Remove all traces of (dashboard) route group files
-   - Ensure all page components use the AppLayout component consistently
-   - Update route links throughout the application
+1. **Fix Customer Deletion**
+   - Update the customer service to correctly handle Supabase DELETE responses
+   - Add better error handling and validation
 
-2. **Fix Customer Management**
-   - Repair customer listing API integration
-   - Fix customer creation form submission
-   - Implement proper customer deletion with confirmation
+2. **Fix Dashboard Upcoming Events**
+   - Simplify the query logic for upcoming events
+   - Ensure proper date format conversion
 
-3. **Fix Events and Categories**
-   - Repair event and category listing API integration
-   - Fix form submissions and redirects
-   - Implement proper deletion with confirmation
-   - Restore detail views
+3. **Fix Category Deletion**
+   - Update the category service DELETE operation handling
+   - Improve error messaging for foreign key constraints
 
-4. **Fix Booking Management**
-   - Repair booking creation form submission
-   - Fix form redirections after submission
-   - Implement proper editing and viewing
+4. **Fix Navigation Structure**
+   - Remove Categories and Messages from sidebar
+   - Add a "View Messages" button to SMS Templates page
 
-5. **Implement Dashboard Visualizations**
-   - Add charts and graphs to the dashboard
-   - Implement data analytics components
+5. **Fix SMS Notifications**
+   - Debug the booking creation SMS sending process
+   - Add comprehensive logging to SMS operations
 
 ### Technical Approach
-1. **Routing Issues**
-   - Clear separation between regular routes and special route groups
-   - Consistent use of the AppLayout component
-   - Update all navigation links to point to valid routes
+1. **Deletion Issues**
+   - Update deletion methods to properly check for success without relying on returned data
+   - Add direct validation of deletion success
+   - Improve error handling and user feedback
 
-2. **API Connectivity**
-   - Review and repair service functions
-   - Add better error handling and feedback
-   - Implement consistent loading states
+2. **Dashboard Data**
+   - Simplify query logic to use reliable date comparison
+   - Add fallback options for event retrieval
+   - Improve date/time handling
 
-3. **Form Handling**
-   - Correct form submission processes
-   - Implement consistent redirect patterns
-   - Add better validation and error states
+3. **Navigation**
+   - Clean up navigation component and configuration
+   - Ensure consistent navigation structure across devices
 
-4. **Dashboard**
-   - Add data visualization components
-   - Implement analytics API endpoints
-   - Create responsive chart layouts
+4. **SMS Functionality**
+   - Thorough audit of SMS sending pipeline
+   - Add logging throughout the process
+   - Create test functionality to verify Twilio integration
 
 ## Technical Details
 
@@ -120,40 +163,62 @@ A comprehensive implementation plan has been created to address all issues. Refe
 - Supabase for database and authentication
 - Tailwind CSS for styling
 - React Hook Form for form handling
+- Twilio for SMS notifications
 
 ### Key Components
 1. Event Management
    - `EventForm`: Form for creating/editing events
    - `EventList`: List of events with filtering
    - `EventView`: Detailed view of an event
+   - `EventCard`: Mobile-friendly card display for events
 
 2. Category Management
    - `CategoryForm`: Form for creating/editing categories
    - `CategoryList`: List of categories
    - `CategoryView`: Detailed view of a category
 
-3. UI Components
+3. Booking Management
+   - `BookingForm`: Form for creating/editing bookings
+   - `BookingList`: List of bookings with filtering
+   - `BookingView`: Detailed view of a booking
+   - `BookingCard`: Mobile-friendly card display for bookings
+   - `QuickBook`: Simplified booking creation component
+
+4. Customer Management
+   - `CustomerForm`: Form for creating/editing customers
+   - `CustomerList`: List of customers with filtering
+   - `CustomerView`: Detailed view of a customer
+   - `CustomerCard`: Mobile-friendly card display for customers
+
+5. SMS Management
+   - `SMSTemplatesPage`: Template management interface
+   - `MessageList`: List of sent messages
+   - `SendSMSForm`: Form for sending manual messages
+
+6. UI Components
    - `Button`: Reusable button component
    - `Input`: Reusable input component
    - `FormGroup`: Form field wrapper
    - `Alert`: Error/success message component
    - `Spinner`: Loading indicator
+   - `PageHeader`: Consistent page header component
 
-4. Layout Components
+7. Layout Components
    - `AppLayout`: Main application layout with authentication protection
    - `Sidebar`: Desktop navigation sidebar
    - `MobileNav`: Mobile bottom navigation
-   - `PageHeader`: Consistent page header component
 
 ### Database Schema
 1. Events Table
    - id: uuid (primary key)
    - title: text
    - description: text
-   - start_time: timestamp
-   - end_time: timestamp
+   - date: date
+   - start_time: time
    - capacity: integer
    - category_id: uuid (foreign key)
+   - is_published: boolean
+   - notes: text
    - created_at: timestamp
    - updated_at: timestamp
 
@@ -166,20 +231,83 @@ A comprehensive implementation plan has been created to address all issues. Refe
    - created_at: timestamp
    - updated_at: timestamp
 
-### API Endpoints
-1. Events
-   - GET /api/events
-   - GET /api/events/[id]
-   - POST /api/events
-   - PUT /api/events/[id]
-   - DELETE /api/events/[id]
+3. Customers Table
+   - id: uuid (primary key)
+   - first_name: text
+   - last_name: text
+   - mobile_number: text
+   - email: text
+   - notes: text
+   - created_at: timestamp
+   - updated_at: timestamp
 
-2. Categories
-   - GET /api/categories
-   - GET /api/categories/[id]
-   - POST /api/categories
-   - PUT /api/categories/[id]
-   - DELETE /api/categories/[id]
+4. Bookings Table
+   - id: uuid (primary key)
+   - customer_id: uuid (foreign key)
+   - event_id: uuid (foreign key)
+   - seats_or_reminder: text
+   - notes: text
+   - created_at: timestamp
+   - updated_at: timestamp
+
+5. SMS Messages Table
+   - id: uuid (primary key)
+   - customer_id: uuid (foreign key)
+   - booking_id: uuid (foreign key)
+   - message_type: text
+   - message_content: text
+   - sent_at: timestamp
+   - status: text
+   - message_sid: text
+
+6. SMS Templates Table
+   - id: text (primary key)
+   - name: text
+   - description: text
+   - content: text
+   - placeholders: text[]
+   - created_at: timestamp
+   - updated_at: timestamp
+
+### SMS Integration
+
+The application includes SMS functionality powered by Twilio. This allows for:
+
+1. **Automated Notifications**
+   - Booking confirmations
+   - Event reminders (24h and 7-day)
+   - Booking cancellations
+   - Event cancellations
+
+2. **Template Management**
+   - Customizable message templates
+   - Support for dynamic content via placeholders
+   - Template testing capability (planned)
+
+3. **Message History**
+   - Tracking of all sent messages
+   - Delivery status monitoring
+   - Filtering by customer or booking
+
+For detailed setup instructions, refer to the `docs/SMS_SETUP.md` file.
+
+### Known Issues and Workarounds
+
+1. **Customer Deletion**
+   - **Issue**: Error appears even when deletion succeeds
+   - **Workaround**: Refresh the page after deletion to see updated customer list
+
+2. **Dashboard Upcoming Events**
+   - **Issue**: Events not displaying on dashboard
+   - **Workaround**: Use the main Events page to view upcoming events
+
+3. **Category Deletion**
+   - **Issue**: Categories cannot be deleted
+   - **Workaround**: None currently available
+
+4. **SMS Notifications**
+   - **Issue**: SMS not sending on booking creation
+   - **Workaround**: Send messages manually from the Messages page
 
 ## Development Guidelines
 
@@ -215,6 +343,11 @@ Required environment variables:
 - NEXT_PUBLIC_SUPABASE_URL
 - NEXT_PUBLIC_SUPABASE_ANON_KEY
 - SUPABASE_SERVICE_ROLE_KEY
+- TWILIO_ACCOUNT_SID
+- TWILIO_AUTH_TOKEN
+- TWILIO_PHONE_NUMBER
+- SMS_ENABLED
+- SMS_DEFAULT_COUNTRY_CODE (optional, defaults to 44 for UK)
 
 ### Build Process
 1. Install dependencies:
@@ -243,34 +376,17 @@ Required environment variables:
    npm run rollback
    ```
 
-## Support
+## Support and Documentation
+
+### Project Documentation
+- `docs/IMPLEMENTATION_PLAN_V1.4.md`: Current implementation plan
+- `docs/SMS_SETUP.md`: Twilio integration setup guide
+- `.env.example`: Example environment configuration
 
 ### Getting Help
 - Check the documentation
 - Review the issues log
-- Contact the development team
-- Check the project repository
-
-### Common Issues
-1. Database Connection
-   - Check environment variables
-   - Verify database credentials
-   - Check network connectivity
-
-2. Authentication
-   - Verify Supabase configuration
-   - Check session management
-   - Review protected routes
-
-3. Build Issues
-   - Clear node_modules
-   - Update dependencies
-   - Check TypeScript errors
-
-4. Routing Issues
-   - Check for duplicate routes
-   - Ensure all routes are properly defined
-   - Verify route group configuration
+- Contact the development team for critical issues
 
 ## Recent Changes
 
