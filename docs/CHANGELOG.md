@@ -56,4 +56,26 @@
 - Initial project setup
 - Basic project structure
 - Core dependencies
-- Basic documentation 
+- Basic documentation
+
+## [0.5.0] - 2024-03-26
+
+### Added
+- New implementation plan (IMPLEMENTATION_PLAN_V1.1.md) to address production issues
+- AppLayout component for consistent layout across all pages
+
+### Fixed
+- Removed duplicate routes from (dashboard) route group
+- Fixed route conflicts between dashboard routes
+- Updated navigation to use correct routes
+
+### Changed
+- Updated HANDOVER.md with current status and detailed next steps
+- Moved dashboard layout and page content to regular routes
+- Improved documentation with latest deployment findings
+
+### Issues Identified
+- Dashboard missing visualizations and charts
+- Customer, Category, and Event pages showing 404 errors
+- Booking creation not working properly
+- Delete functions not executing correctly in some cases 
