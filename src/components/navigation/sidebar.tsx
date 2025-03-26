@@ -143,14 +143,16 @@ export function Sidebar() {
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md ${
+                  className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors duration-150 ${
                     isActive 
                       ? 'bg-blue-800 text-white' 
-                      : 'text-blue-100 hover:bg-blue-600'
+                      : 'text-blue-100 hover:bg-blue-600 hover:text-white'
                   }`}
                 >
                   <item.icon
-                    className="mr-3 flex-shrink-0 h-6 w-6 text-blue-300"
+                    className={`mr-3 flex-shrink-0 h-6 w-6 transition-colors duration-150 ${
+                      isActive ? 'text-white' : 'text-blue-300 group-hover:text-white'
+                    }`}
                     aria-hidden="true"
                   />
                   <span className="flex-1">{item.name}</span>
@@ -177,7 +179,7 @@ export function Sidebar() {
               </p>
               <button
                 onClick={() => signOut()}
-                className="text-xs font-medium text-blue-200 hover:text-white"
+                className="text-xs font-medium text-blue-200 hover:text-white transition-colors duration-150"
               >
                 Sign out
               </button>

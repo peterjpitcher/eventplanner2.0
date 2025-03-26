@@ -1,14 +1,18 @@
-import { Metadata } from 'next';
-import { Inter } from 'next/font/google';
+import './globals.css'
+import { Inter } from 'next/font/google'
 import { AuthProvider } from '@/contexts/auth-context';
-import './globals.css';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ subsets: ['latin'] })
 
-export const metadata: Metadata = {
-  title: 'Event Planner',
-  description: 'Manage pub events efficiently',
-};
+export const metadata = {
+  title: 'Event Planner - Manage Events & Bookings',
+  description: 'A comprehensive event management system for organizing events, managing bookings, and sending automated notifications.',
+  icons: {
+    icon: '/favicon.ico',
+    shortcut: '/favicon-16x16.png',
+    apple: '/apple-touch-icon.png',
+  },
+}
 
 export default function RootLayout({
   children,
@@ -17,7 +21,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>
+      <body suppressHydrationWarning={true} className={inter.className}>
         <AuthProvider>
           {children}
         </AuthProvider>

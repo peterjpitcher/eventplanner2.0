@@ -8,6 +8,8 @@ import { format } from 'date-fns';
 import { Button } from '../ui/button';
 import { toast } from 'sonner';
 import { SMSMessage } from '@/services/sms-service';
+import { BookingForm } from './booking-form';
+import { Dialog } from '../ui/dialog';
 
 interface BookingDetailProps {
   booking: Booking;
@@ -25,6 +27,8 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
   smsMessages
 }) => {
   const [loading, setLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   // Check if 7-day and 24-hour reminders have been sent
   const has7DayReminder = smsMessages?.some(msg => msg.message_type === 'reminder_7day');
@@ -57,6 +61,36 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
     }
   };
 
+  const handleUpdateBooking = async (formData: any) => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`/api/bookings/${booking.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast.success('Booking updated successfully');
+        setIsEditing(false);
+        if (onRefresh) onRefresh();
+      } else {
+        setError(data.error || 'Failed to update booking');
+      }
+    } catch (error) {
+      setError('An unexpected error occurred');
+      console.error('Error updating booking:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm">
       <div className="flex justify-between items-start mb-4">
@@ -64,10 +98,19 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
           <h3 className="text-lg font-medium">{customerName}</h3>
           <p className="text-gray-600">{eventName}</p>
         </div>
-        <div className="text-sm text-gray-500">
-          {booking.created_at && (
-            <p>Booked on {format(new Date(booking.created_at), 'dd MMM yyyy')}</p>
-          )}
+        <div className="flex items-center gap-4">
+          <div className="text-sm text-gray-500">
+            {booking.created_at && (
+              <p>Booked on {format(new Date(booking.created_at), 'dd MMM yyyy')}</p>
+            )}
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsEditing(true)}
+          >
+            Edit Booking
+          </Button>
         </div>
       </div>
       
@@ -138,6 +181,21 @@ export const BookingDetail: React.FC<BookingDetailProps> = ({
           )}
         </div>
       </div>
+
+      {/* Edit Booking Dialog */}
+      <Dialog
+        open={isEditing}
+        onClose={() => setIsEditing(false)}
+        title="Edit Booking"
+      >
+        <BookingForm
+          booking={booking}
+          eventId={booking.event_id}
+          onSubmit={handleUpdateBooking}
+          isSubmitting={loading}
+          error={error}
+        />
+      </Dialog>
     </div>
   );
 }; 

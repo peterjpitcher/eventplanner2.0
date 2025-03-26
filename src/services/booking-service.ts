@@ -30,65 +30,118 @@ export const bookingService = {
    * Get all bookings with customer and event information
    */
   async getBookings(): Promise<{ data: Booking[] | null; error: any }> {
-    const { data, error } = await supabase
+    const { data: bookings, error } = await supabase
       .from('bookings')
-      .select(`
-        *,
-        customer:customer_id (*),
-        event:event_id (*)
-      `)
+      .select('*')
       .order('created_at', { ascending: false });
     
-    return { data, error };
+    if (error) {
+      return { data: null, error };
+    }
+
+    // Fetch related data separately
+    const bookingsWithRelations = await Promise.all(
+      bookings.map(async (booking) => {
+        const [customerResult, eventResult] = await Promise.all([
+          customerService.getCustomerById(booking.customer_id),
+          eventService.getEventById(booking.event_id)
+        ]);
+
+        return {
+          ...booking,
+          customer: customerResult.data,
+          event: eventResult.data
+        };
+      })
+    );
+
+    return { data: bookingsWithRelations, error: null };
   },
 
   /**
    * Get bookings for a specific event
    */
   async getBookingsByEvent(eventId: string): Promise<{ data: Booking[] | null; error: any }> {
-    const { data, error } = await supabase
+    const { data: bookings, error } = await supabase
       .from('bookings')
-      .select(`
-        *,
-        customer:customer_id (*)
-      `)
+      .select('*')
       .eq('event_id', eventId)
       .order('created_at', { ascending: false });
     
-    return { data, error };
+    if (error) {
+      return { data: null, error };
+    }
+
+    // Fetch customer data separately
+    const bookingsWithCustomers = await Promise.all(
+      bookings.map(async (booking) => {
+        const customerResult = await customerService.getCustomerById(booking.customer_id);
+        return {
+          ...booking,
+          customer: customerResult.data
+        };
+      })
+    );
+
+    return { data: bookingsWithCustomers, error: null };
   },
 
   /**
    * Get bookings for a specific customer
    */
   async getBookingsByCustomer(customerId: string): Promise<{ data: Booking[] | null; error: any }> {
-    const { data, error } = await supabase
+    const { data: bookings, error } = await supabase
       .from('bookings')
-      .select(`
-        *,
-        event:event_id (*)
-      `)
+      .select('*')
       .eq('customer_id', customerId)
       .order('created_at', { ascending: false });
     
-    return { data, error };
+    if (error) {
+      return { data: null, error };
+    }
+
+    // Fetch event data separately
+    const bookingsWithEvents = await Promise.all(
+      bookings.map(async (booking) => {
+        const eventResult = await eventService.getEventById(booking.event_id);
+        return {
+          ...booking,
+          event: eventResult.data
+        };
+      })
+    );
+
+    return { data: bookingsWithEvents, error: null };
   },
 
   /**
    * Get a single booking by ID
    */
   async getBookingById(id: string): Promise<{ data: Booking | null; error: any }> {
-    const { data, error } = await supabase
+    const { data: booking, error } = await supabase
       .from('bookings')
-      .select(`
-        *,
-        customer:customer_id (*),
-        event:event_id (*)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
     
-    return { data, error };
+    if (error) {
+      return { data: null, error };
+    }
+
+    // Fetch related data separately
+    const [customerResult, eventResult] = await Promise.all([
+      customerService.getCustomerById(booking.customer_id),
+      eventService.getEventById(booking.event_id)
+    ]);
+
+    return {
+      data: {
+        ...booking,
+        customer: customerResult.data,
+        event: eventResult.data
+      },
+      error: null
+    };
   },
 
   /**
@@ -134,33 +187,38 @@ export const bookingService = {
       const { data, error } = await supabase
         .from('bookings')
         .insert([booking])
-        .select(`
-          *,
-          customer:customer_id (*),
-          event:event_id (*)
-        `)
+        .select('*')
         .single();
       
       if (error) {
         return { data: null, error, smsSent: false };
       }
 
+      // Fetch related data
+      const [customerResult, eventResult] = await Promise.all([
+        customerService.getCustomerById(data.customer_id),
+        eventService.getEventById(data.event_id)
+      ]);
+
+      const bookingWithRelations = {
+        ...data,
+        customer: customerResult.data,
+        event: eventResult.data
+      };
+
       // Initialize SMS sent flag
       let smsSent = false;
 
       // If SMS is enabled, send a booking confirmation
-      if (process.env.SMS_ENABLED === 'true' && data) {
+      if (process.env.SMS_ENABLED === 'true' && bookingWithRelations) {
         try {
-          // Verify we have all the data needed for the SMS
-          const customer = data.customer || 
-            (await customerService.getCustomerById(data.customer_id)).data;
-          
-          const event = data.event || 
-            (await eventService.getEventById(data.event_id)).data;
-          
-          if (customer && event) {
+          if (bookingWithRelations.customer && bookingWithRelations.event) {
             // Send SMS and wait for the result
-            const smsResult = await this.sendConfirmationSMS(data, customer, event);
+            const smsResult = await this.sendConfirmationSMS(
+              bookingWithRelations,
+              bookingWithRelations.customer,
+              bookingWithRelations.event
+            );
             smsSent = smsResult.success;
             
             if (!smsResult.success) {
@@ -173,7 +231,7 @@ export const bookingService = {
         }
       }
 
-      return { data, error: null, smsSent };
+      return { data: bookingWithRelations, error: null, smsSent };
     } catch (err) {
       console.error('Unexpected error creating booking:', err);
       return { data: null, error: err, smsSent: false };
@@ -188,74 +246,39 @@ export const bookingService = {
       .from('bookings')
       .update(booking)
       .eq('id', id)
-      .select(`
-        *,
-        customer:customer_id (*),
-        event:event_id (*)
-      `)
+      .select('*')
       .single();
     
-    return { data, error };
+    if (error) {
+      return { data: null, error };
+    }
+
+    // Fetch related data
+    const [customerResult, eventResult] = await Promise.all([
+      customerService.getCustomerById(data.customer_id),
+      eventService.getEventById(data.event_id)
+    ]);
+
+    return {
+      data: {
+        ...data,
+        customer: customerResult.data,
+        event: eventResult.data
+      },
+      error: null
+    };
   },
 
   /**
    * Delete a booking
    */
-  async deleteBooking(id: string, sendSMS: boolean = false): Promise<{ error: any; smsSent?: boolean }> {
-    try {
-      // First, get the booking details if we need to send an SMS
-      let bookingDetails = null;
-      let smsSent = false;
-      
-      if (sendSMS) {
-        const { data, error: fetchError } = await this.getBookingById(id);
-        if (fetchError) {
-          console.error('Error fetching booking for SMS notification:', fetchError);
-          return { error: fetchError };
-        }
-        bookingDetails = data;
-      }
-      
-      // Delete the booking
-      const { error } = await supabase
-        .from('bookings')
-        .delete()
-        .eq('id', id);
-      
-      if (error) {
-        return { error };
-      }
-      
-      // Send SMS notification if requested and booking details were found
-      if (sendSMS && bookingDetails && bookingDetails.customer && bookingDetails.event) {
-        try {
-          const { customer, event } = bookingDetails;
-          const { formattedDate, formattedTime } = this.formatSMSDateTime(event.start_time);
-          
-          const smsResult = await smsService.sendBookingCancellation({
-            customerId: customer.id,
-            bookingId: id,
-            eventName: event.title,
-            eventDate: formattedDate,
-            eventTime: formattedTime,
-            customerName: customer.first_name
-          });
-          
-          smsSent = smsResult.success;
-          if (!smsResult.success) {
-            console.error('Error sending booking cancellation SMS:', smsResult.error);
-          }
-        } catch (smsError) {
-          console.error('Error processing SMS for booking cancellation:', smsError);
-          // Continue with booking deletion even if SMS fails
-        }
-      }
-      
-      return { error: null, smsSent };
-    } catch (err) {
-      console.error('Unexpected error deleting booking:', err);
-      return { error: err };
-    }
+  async deleteBooking(id: string): Promise<{ error: any }> {
+    const { error } = await supabase
+      .from('bookings')
+      .delete()
+      .eq('id', id);
+    
+    return { error };
   }
 };
 

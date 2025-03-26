@@ -63,6 +63,45 @@ interface BookingWithEvent {
   };
 }
 
+// Define proper types for Supabase responses
+interface SupabaseBooking {
+  id: string;
+  created_at: string;
+  event_id: string;
+  event?: {
+    id: string;
+    title?: string;
+    category_id?: string;
+    category?: {
+      id: string;
+      name: string;
+    }[];
+  }[];
+  customer?: {
+    id: string;
+    first_name?: string;
+    last_name?: string;
+  }[];
+}
+
+interface SupabaseMessage {
+  id: string;
+  content?: string;
+  created_at: string;
+  customer?: {
+    id: string;
+    first_name?: string;
+    last_name?: string;
+  }[];
+}
+
+interface ActivityItem {
+  id: string;
+  type: 'booking' | 'message';
+  content: string;
+  timestamp: string;
+}
+
 type SupabaseResponse<T> = {
   data: T | null;
   error: any;
@@ -135,8 +174,10 @@ export async function getCategoryBookingData() {
       .from('bookings')
       .select(`
         id,
+        event_id,
         event:events (
           id,
+          category_id,
           category:event_categories (
             id,
             name
@@ -146,9 +187,14 @@ export async function getCategoryBookingData() {
 
     if (error) throw error;
 
+    if (!bookings || bookings.length === 0) {
+      return { labels: ['No Data'], data: [1] };
+    }
+
     // Process the data to get category counts
-    const categoryCounts = bookings.reduce((acc: Record<string, number>, booking) => {
-      const categoryName = booking.event?.category?.name || 'Uncategorized';
+    const categoryCounts = (bookings as SupabaseBooking[]).reduce((acc: Record<string, number>, booking) => {
+      // Access category name safely
+      const categoryName = booking.event?.[0]?.category?.[0]?.name || 'Uncategorized';
       acc[categoryName] = (acc[categoryName] || 0) + 1;
       return acc;
     }, {});
@@ -159,7 +205,7 @@ export async function getCategoryBookingData() {
     };
   } catch (error) {
     console.error('Error fetching category booking data:', error);
-    return { labels: [], data: [] };
+    return { labels: ['Error'], data: [0] };
   }
 }
 
@@ -170,8 +216,10 @@ export async function getMonthlyBookingData() {
       .select(`
         id,
         created_at,
+        event_id,
         event:events (
           id,
+          category_id,
           category:event_categories (
             id,
             name
@@ -182,12 +230,38 @@ export async function getMonthlyBookingData() {
 
     if (error) throw error;
 
+    if (!bookings || bookings.length === 0) {
+      // Create empty monthly data for the last 6 months
+      const months = [];
+      const monthsData = [];
+      for (let i = 0; i < 6; i++) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        months.unshift(date.toLocaleString('default', { month: 'short' }));
+        monthsData.unshift(0);
+      }
+      return {
+        labels: months,
+        data: monthsData
+      };
+    }
+
     // Process the data to get monthly counts
-    const monthlyCounts = bookings.reduce((acc: Record<string, number>, booking) => {
+    const monthlyCounts: Record<string, number> = {};
+    
+    // Initialize with empty months for the last 6 months
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      const month = date.toLocaleString('default', { month: 'short' });
+      monthlyCounts[month] = 0;
+    }
+
+    // Fill in actual booking counts
+    bookings.forEach(booking => {
       const month = new Date(booking.created_at).toLocaleString('default', { month: 'short' });
-      acc[month] = (acc[month] || 0) + 1;
-      return acc;
-    }, {});
+      monthlyCounts[month] = (monthlyCounts[month] || 0) + 1;
+    });
 
     return {
       labels: Object.keys(monthlyCounts),
@@ -199,7 +273,7 @@ export async function getMonthlyBookingData() {
   }
 }
 
-export async function getRecentActivity() {
+export async function getRecentActivity(): Promise<ActivityItem[]> {
   try {
     // Fetch recent bookings
     const { data: bookings, error: bookingsError } = await supabase
@@ -209,7 +283,7 @@ export async function getRecentActivity() {
         created_at,
         event:events (
           id,
-          name
+          title
         ),
         customer:customers (
           id,
@@ -224,7 +298,7 @@ export async function getRecentActivity() {
 
     // Fetch recent messages
     const { data: messages, error: messagesError } = await supabase
-      .from('customer_messages')
+      .from('messages')
       .select(`
         id,
         content,
@@ -238,26 +312,36 @@ export async function getRecentActivity() {
       .order('created_at', { ascending: false })
       .limit(5);
 
-    if (messagesError) throw messagesError;
+    if (messagesError && messagesError.code !== 'PGRST116') {
+      // PGRST116 is "relation does not exist" which means the table is empty or not created yet
+      // We'll just proceed with empty messages in that case
+      if (messagesError.code !== '42P01') {  // 42P01 is PostgreSQL's "table does not exist"
+        throw messagesError;
+      }
+    }
 
     // Combine and sort activities
-    const activities = [
-      ...(bookings || []).map(booking => ({
-        id: booking.id,
-        type: 'booking',
-        content: `${booking.customer?.first_name} ${booking.customer?.last_name} booked ${booking.event?.name}`,
-        timestamp: booking.created_at
-      })),
-      ...(messages || []).map(message => ({
-        id: message.id,
-        type: 'message',
-        content: `New message from ${message.customer?.first_name} ${message.customer?.last_name}`,
-        timestamp: message.created_at
-      }))
-    ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
-      .slice(0, 5);
+    const bookingActivities: ActivityItem[] = (bookings || []).map((booking: SupabaseBooking) => ({
+      id: booking.id,
+      type: 'booking',
+      content: `${booking.customer?.[0]?.first_name || ''} ${booking.customer?.[0]?.last_name || ''} booked ${booking.event?.[0]?.title || 'an event'}`,
+      timestamp: booking.created_at
+    }));
 
-    return activities;
+    const messageActivities: ActivityItem[] = (messages || []).map((message: SupabaseMessage) => ({
+      id: message.id,
+      type: 'message',
+      content: `Message from ${message.customer?.[0]?.first_name || ''} ${message.customer?.[0]?.last_name || ''}: ${message.content || ''}`,
+      timestamp: message.created_at
+    }));
+
+    // Combine all activities
+    const allActivities: ActivityItem[] = [...bookingActivities, ...messageActivities];
+    
+    // Sort by timestamp (newest first) and limit to 5
+    return allActivities
+      .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+      .slice(0, 5);
   } catch (error) {
     console.error('Error fetching recent activity:', error);
     return [];

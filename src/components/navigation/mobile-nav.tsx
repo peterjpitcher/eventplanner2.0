@@ -44,6 +44,20 @@ const navigation: NavItem[] = [
     ),
   },
   {
+    name: 'Categories',
+    href: '/categories',
+    icon: (props) => (
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
+        />
+      </svg>
+    ),
+  },
+  {
     name: 'Events',
     href: '/events',
     icon: (props) => (
@@ -53,6 +67,20 @@ const navigation: NavItem[] = [
           strokeLinejoin="round"
           strokeWidth={2}
           d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+        />
+      </svg>
+    ),
+  },
+  {
+    name: 'Bookings',
+    href: '/bookings',
+    icon: (props) => (
+      <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" {...props}>
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"
         />
       </svg>
     ),
@@ -122,7 +150,7 @@ export function MobileNav() {
             <Link
               key={item.name}
               href={item.href}
-              className={`flex flex-col items-center px-3 py-2 text-xs font-medium ${
+              className={`flex flex-col items-center px-2 py-2 text-xs font-medium ${
                 isActive 
                   ? 'text-blue-600' 
                   : 'text-gray-500 hover:text-gray-700'

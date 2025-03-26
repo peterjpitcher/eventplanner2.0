@@ -1,52 +1,45 @@
 'use client';
 
 import React from 'react';
-import { redirect } from 'next/navigation';
-import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { Sidebar } from '@/components/navigation/sidebar';
 import { MobileNav } from '@/components/navigation/mobile-nav';
+import { useAuth } from '@/contexts/auth-context';
 
-// Wrapping component that handles auth check
-function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const { user, isLoading } = useAuth();
 
-  // Show a simple loading state
+  // Show loading spinner while auth state is determined
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="flex flex-col items-center space-y-4 p-6 max-w-md mx-auto text-center">
+          <div className="h-8 w-8 text-blue-600 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"></div>
+          <h2 className="text-xl font-semibold text-gray-800">Loading...</h2>
+        </div>
       </div>
     );
   }
 
-  // Redirect to login if no user
+  // If no user is logged in, the auth hook will redirect
   if (!user) {
-    redirect('/auth/login');
     return null;
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100">
       <Sidebar />
-      <div className="md:pl-64 flex flex-col flex-1">
-        <main className="flex-1 pb-16 md:pb-0">
-          <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-              {children}
-            </div>
+      <div className="flex flex-col flex-1 md:ml-64">
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
+          <div className="max-w-7xl mx-auto bg-white shadow rounded-lg p-6">
+            {children}
           </div>
         </main>
+        <MobileNav />
       </div>
-      <MobileNav />
     </div>
-  );
-}
-
-// Outer layout that provides the AuthProvider
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  return (
-    <AuthProvider>
-      <DashboardLayoutContent>{children}</DashboardLayoutContent>
-    </AuthProvider>
   );
 } 

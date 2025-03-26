@@ -12,6 +12,8 @@ Event Planner 2.0 is a modern web application built with Next.js 14, TypeScript,
 - **Charts**: Chart.js with react-chartjs-2
 - **Date Handling**: date-fns
 - **Icons**: Heroicons
+- **Notifications**: Sonner (toast notifications)
+- **SMS Integration**: Twilio (for booking notifications)
 
 ## Project Structure
 ```
@@ -23,8 +25,12 @@ src/
 ├── components/            # React components
 │   ├── ui/               # Reusable UI components
 │   ├── dashboard/        # Dashboard-specific components
-│   └── forms/            # Form components
+│   ├── forms/            # Form components
+│   ├── events/           # Event-specific components
+│   ├── bookings/         # Booking-specific components
+│   └── categories/       # Category-specific components
 ├── lib/                   # Core utilities and configurations
+├── services/             # Business logic and API services
 ├── utils/                 # Helper functions and services
 └── types/                 # TypeScript type definitions
 ```
@@ -44,12 +50,23 @@ The dashboard provides a comprehensive overview of the event planning business w
 - Efficient data fetching with parallel requests
 - Proper error handling and loading states
 - Real-time updates where applicable
+- Optimistic updates for better UX
 
 ### User Interface
 - Responsive design with Tailwind CSS
 - Loading states and animations
 - Consistent styling across components
 - Accessible UI elements
+- Form validation and error handling
+- Toast notifications for user feedback
+
+### Booking Management
+- Comprehensive booking creation and management
+- Customer search and selection
+- Event selection and validation
+- Seats/reminder preferences
+- SMS notifications for bookings
+- Booking history and tracking
 
 ## Database Schema
 The application uses the following main tables:
@@ -58,18 +75,22 @@ The application uses the following main tables:
 - `bookings`: Event bookings and reservations
 - `messages`: Customer communications
 - `categories`: Event categories
+- `sms_messages`: SMS notification history
 
 ## Security
 - Authentication handled by Supabase Auth
 - Row Level Security (RLS) policies in Supabase
 - Type-safe database operations
 - Secure API routes
+- Environment variable protection
 
 ## Performance Optimizations
 - Client-side data fetching with loading states
 - Parallel data fetching where possible
 - Dynamic imports for heavy components
 - Efficient chart rendering with Chart.js
+- Optimistic updates for better UX
+- Proper error boundaries
 
 ## Development Guidelines
 1. Use TypeScript for all new code
@@ -78,6 +99,9 @@ The application uses the following main tables:
 4. Add loading states for async operations
 5. Keep components modular and reusable
 6. Document complex logic and decisions
+7. Use proper form validation
+8. Implement proper error messages
+9. Follow accessibility guidelines
 
 ## Deployment
 The application is deployed to Vercel with the following considerations:
@@ -85,10 +109,15 @@ The application is deployed to Vercel with the following considerations:
 - Database migrations handled through Supabase
 - Build optimizations enabled
 - Error monitoring and logging in place
+- SMS service integration
+- Proper error handling and recovery
 
 ## Future Enhancements
 1. Enhanced reporting capabilities
 2. Advanced analytics dashboard
 3. Customer communication features
 4. Event management improvements
-5. Integration with external services 
+5. Integration with external services
+6. Manual seat number input for bookings
+7. Enhanced SMS notification system
+8. Advanced booking analytics 
