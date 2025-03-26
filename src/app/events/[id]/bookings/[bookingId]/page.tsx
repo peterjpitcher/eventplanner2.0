@@ -4,7 +4,7 @@ import { notFound } from 'next/navigation';
 import { bookingService } from '@/services/booking-service';
 import { customerService } from '@/services/customer-service';
 import { eventService } from '@/services/event-service';
-import { formatDateTime } from '@/lib/date-utils';
+import { formatDateAndTime } from '@/lib/date-utils';
 import { SMSMessageListWrapper } from './sms-message-list-wrapper';
 import { SendSMSFormWrapper } from './send-sms-form-wrapper';
 
@@ -46,7 +46,7 @@ export default async function BookingDetailsPage({ params }: { params: { id: str
   }
 
   // Format the event date and time
-  const eventDateTime = formatDateTime(event.date, event.start_time);
+  const eventDateTime = formatDateAndTime(event.date, event.start_time);
 
   return (
     <div className="max-w-3xl mx-auto py-6 sm:px-6 lg:px-8">
