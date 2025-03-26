@@ -78,19 +78,20 @@ export function BookingDetail({ booking, eventName, customerName, onRefresh, sms
     setIsSubmitting(true);
     
     try {
-      // If the customer wants to be notified of the cancellation, send an SMS
-      if (sendSMSOnDelete && booking.customer && booking.event) {
-        // Implementation for cancellation SMS would go here
-        console.log('Would send cancellation SMS to customer');
+      const response = await bookingService.deleteBooking(booking.id, sendSMSOnDelete);
+      
+      if (!response.success) {
+        throw new Error(response.error || 'Failed to delete booking');
       }
       
-      const response = await bookingService.deleteBooking(booking.id);
-      
-      if (response.error) {
-        throw response.error;
+      if (response.smsSent) {
+        toast.success('Booking deleted and cancellation SMS sent');
+      } else if (sendSMSOnDelete) {
+        toast.success('Booking deleted, but cancellation SMS could not be sent');
+      } else {
+        toast.success('Booking deleted successfully');
       }
       
-      toast.success('Booking deleted successfully');
       setIsDeleting(false);
       
       if (onRefresh) {

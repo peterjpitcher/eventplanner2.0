@@ -98,7 +98,25 @@ export default function EventPage({ params }: EventPageProps) {
 
         <div className="mt-6 bg-white shadow-sm rounded-lg border border-gray-200">
           <div className="px-6 py-8">
-            <EventDetails event={event} />
+            <EventDetails 
+              event={event} 
+              onEventUpdated={() => {
+                // Refetch the event to show the cancelled status
+                const refreshEvent = async () => {
+                  try {
+                    const { data } = await eventService.getEventById(id);
+                    if (data) {
+                      setEvent(data);
+                    }
+                  } catch (err) {
+                    console.error('Error refreshing event:', err);
+                  }
+                };
+                refreshEvent();
+                // Also refresh bookings
+                handleBookingChange();
+              }} 
+            />
           </div>
         </div>
         

@@ -227,6 +227,44 @@ export const bookingService = {
   },
 
   /**
+   * Send SMS notification for booking cancellation
+   */
+  async sendCancellationSMS(booking: Booking, customer: Customer, event: Event): Promise<SMSResult> {
+    try {
+      // Check if customer has a mobile number
+      if (!customer.mobile_number) {
+        return { success: false, error: 'Customer has no mobile number' };
+      }
+
+      // Format the date for the message
+      const eventDate = new Date(event.date);
+      const formattedDate = eventDate.toLocaleDateString('en-GB', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+      });
+      
+      // Format the time (if available)
+      const timeInfo = event.start_time ? ` at ${event.start_time}` : '';
+
+      // Create the message
+      const message = `Hi ${customer.first_name}, your booking for ${event.title} on ${formattedDate}${timeInfo} has been cancelled. Please contact us if you have any questions.`;
+
+      // Send the SMS via the SMS service
+      return await smsService.sendSMS({
+        to: customer.mobile_number,
+        message,
+        booking_id: booking.id,
+        message_type: 'booking_cancellation'
+      });
+    } catch (error: any) {
+      logger.error('Error sending cancellation SMS:', error);
+      return { success: false, error: error.message || 'Failed to send cancellation SMS' };
+    }
+  },
+
+  /**
    * Create a new booking
    */
   async createBooking(booking: BookingFormData): Promise<ApiResponse<Booking> & { smsSent?: boolean }> {
@@ -464,60 +502,88 @@ export const bookingService = {
   /**
    * Delete a booking
    */
-  async deleteBooking(id: string): Promise<ApiResponse<null>> {
+  async deleteBooking(id: string, sendCancellationSMS: boolean = false): Promise<{ success: boolean; error?: any; smsSent?: boolean }> {
     try {
       logger.info(`Attempting to delete booking with ID: ${id}`);
       
-      // First check if the booking exists
-      const { data: existingBooking, error: checkError } = await supabase
-        .from('bookings')
-        .select('id')
-        .eq('id', id)
-        .single();
+      // If we need to send a cancellation SMS, get the booking details first
+      let smsSent = false;
       
-      if (checkError) {
-        if (checkError.code === 'PGRST116') {
-          logger.error(`Booking with ID ${id} not found for deletion`);
-          return { 
-            data: null, 
-            error: new Error(`Booking with ID ${id} not found`) 
-          };
+      if (sendCancellationSMS) {
+        // Get the booking with customer and event details
+        const { data: bookingWithDetails, error: detailsError } = await this.getBookingWithDetails(id);
+        
+        if (detailsError || !bookingWithDetails) {
+          logger.error(`Error fetching booking details for SMS: ${detailsError}`);
+          // Continue with deletion even if we couldn't get details for SMS
+        } else {
+          // Send the cancellation SMS
+          const smsResult = await this.sendCancellationSMS(
+            bookingWithDetails,
+            bookingWithDetails.customer,
+            bookingWithDetails.event
+          );
+          
+          smsSent = smsResult.success;
+          logger.info(`Cancellation SMS ${smsSent ? 'sent' : 'failed'}`);
         }
-        throw checkError;
       }
       
-      // Perform the actual deletion
-      const { error: deleteError } = await supabase
+      // Delete the booking
+      const { error } = await supabase
         .from('bookings')
         .delete()
         .eq('id', id);
-      
-      if (deleteError) {
-        logger.error(`Error during booking deletion for ID ${id}:`, deleteError);
-        throw deleteError;
+
+      if (error) {
+        logger.error(`Error deleting booking ${id}:`, error);
+        return { success: false, error, smsSent };
       }
-      
-      // Delete any related SMS messages (optional clean-up)
-      try {
-        await supabase
-          .from('sms_messages')
-          .update({ archived: true })
-          .eq('booking_id', id);
-      } catch (smsError) {
-        // Non-critical error, just log it but continue
-        logger.warn(`Could not archive SMS messages for booking ${id}:`, smsError);
-      }
-      
-      logger.info(`Successfully deleted booking with ID: ${id}`);
-      return { data: null, error: null };
+
+      return { success: true, smsSent };
     } catch (error) {
-      logger.error(`Error deleting booking with ID ${id}:`, error);
-      return { 
-        data: null, 
-        error: error instanceof Error 
-          ? error 
-          : new Error(`Failed to delete booking: ${String(error)}`) 
+      logger.error(`Error deleting booking ${id}:`, error);
+      return { success: false, error };
+    }
+  },
+
+  // Get a booking with customer and event details
+  async getBookingWithDetails(id: string): Promise<{ data?: BookingWithCustomerAndEvent; error?: any }> {
+    try {
+      // First get the booking
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .select('*')
+        .eq('id', id)
+        .single();
+        
+      if (bookingError || !booking) {
+        return { error: bookingError || new Error('Booking not found') };
+      }
+      
+      // Get the customer
+      const { data: customer, error: customerError } = await customerService.getCustomerById(booking.customer_id);
+      if (customerError || !customer) {
+        return { error: customerError || new Error('Customer not found') };
+      }
+      
+      // Get the event
+      const { data: event, error: eventError } = await eventService.getEventById(booking.event_id);
+      if (eventError || !event) {
+        return { error: eventError || new Error('Event not found') };
+      }
+      
+      // Return the booking with its related data
+      return {
+        data: {
+          ...booking,
+          customer,
+          event
+        }
       };
+    } catch (error) {
+      logger.error(`Error getting booking details for ID ${id}:`, error);
+      return { error };
     }
   }
 };

@@ -215,96 +215,119 @@ export const eventService = {
   },
 
   /**
-   * Cancel an event (mark as canceled rather than deleting)
+   * Cancel an event
+   * @param id The event ID
+   * @param sendCancellationSMS Whether to send cancellation SMS to all bookings
+   * @returns Result with cancellation details
    */
-  async cancelEvent(id: string, sendSMS: boolean = false, customMessage: string = ''): Promise<{ 
-    data: Event | null; 
-    error: Error | null;
-    smsResults?: {
-      success: boolean;
-      messagesSent: number;
-      messagesFailed: number;
-      totalBookings: number;
+  async cancelEvent(id: string, sendCancellationSMS: boolean = false): Promise<{ 
+    success: boolean; 
+    error?: any; 
+    smsStats?: { 
+      total: number; 
+      sent: number; 
+      failed: number; 
     } 
   }> {
     try {
-      // First update the event in the database
-      const { data, error } = await supabase
+      // First, get the event details
+      const { data: event, error: eventError } = await this.getEventById(id);
+      
+      if (eventError || !event) {
+        throw eventError || new Error('Event not found');
+      }
+      
+      // Update the event to set it as cancelled
+      const { error: updateError } = await supabase
         .from('events')
         .update({ is_canceled: true })
-        .eq('id', id)
-        .select();
+        .eq('id', id);
       
-      if (error) throw error;
-      
-      if (!data || data.length === 0) {
-        throw new Error('Failed to cancel event');
+      if (updateError) {
+        throw updateError;
       }
       
-      // If SMS notifications are requested
-      if (sendSMS) {
-        try {
-          // Get event details for the message
-          const { data: eventData } = await this.getEventById(id);
+      // If SMS notifications are requested, send cancellation messages
+      const smsStats = { total: 0, sent: 0, failed: 0 };
+      
+      if (sendCancellationSMS) {
+        // Get all bookings for this event
+        const { data: bookings } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            customers:customer_id (
+              id, 
+              first_name, 
+              last_name, 
+              mobile_number
+            )
+          `)
+          .eq('event_id', id);
+        
+        if (bookings && bookings.length > 0) {
+          // Track SMS stats
+          smsStats.total = bookings.length;
           
-          if (!eventData) {
-            throw new Error('Could not load event details for SMS');
-          }
-          
-          // Get all bookings for this event
-          const { data: bookings, error: bookingsError } = await supabase
-            .from('bookings')
-            .select('*, customer:customer_id(*)')
-            .eq('event_id', id);
-          
-          if (bookingsError) throw bookingsError;
-          
-          // Use the sendEventCancellationToAllBookings function from smsService
-          const smsResult = await smsService.sendEventCancellationToAllBookings({
-            eventId: id,
-            eventName: eventData.title,
-            eventDate: format(new Date(eventData.date), 'dd/MM/yyyy'),
-            eventTime: eventData.start_time,
-            customMessage
+          // Process each booking
+          const smsPromises = bookings.map(async (booking) => {
+            const customer = booking.customers;
+            
+            // Skip if no mobile number
+            if (!customer || !customer.mobile_number) {
+              return { success: false };
+            }
+            
+            try {
+              // Format the date
+              const eventDate = new Date(event.date);
+              const formattedDate = eventDate.toLocaleDateString('en-GB', { 
+                weekday: 'long', 
+                day: 'numeric', 
+                month: 'long', 
+                year: 'numeric'
+              });
+              
+              // Format time (if available)
+              const timeInfo = event.start_time ? ` at ${event.start_time}` : '';
+              
+              // Create the message
+              const message = `Hi ${customer.first_name}, we regret to inform you that ${event.title} scheduled for ${formattedDate}${timeInfo} has been cancelled. We apologize for any inconvenience.`;
+              
+              // Send the SMS
+              return await smsService.sendSMS({
+                to: customer.mobile_number,
+                message,
+                booking_id: booking.id,
+                message_type: 'event_cancellation'
+              });
+            } catch (error) {
+              console.error(`Error sending cancellation SMS for booking ${booking.id}:`, error);
+              return { success: false };
+            }
           });
           
-          // Fetch the updated event with category information
-          const result = await this.getEventById(id);
+          // Wait for all SMS to be sent
+          const results = await Promise.all(smsPromises);
           
-          return {
-            ...result,
-            smsResults: smsResult
-          };
-        } catch (smsError) {
-          console.error('Error sending cancellation SMS:', smsError);
-          // Continue with returning the event data even if SMS fails
-          const result = await this.getEventById(id);
-          return {
-            ...result,
-            smsResults: {
-              success: false,
-              messagesSent: 0, 
-              messagesFailed: 0,
-              totalBookings: 0
+          // Count successes and failures
+          results.forEach(result => {
+            if (result.success) {
+              smsStats.sent++;
+            } else {
+              smsStats.failed++;
             }
-          };
+          });
         }
       }
       
-      // If no SMS needed, just return the updated event
-      return this.getEventById(id);
+      return { 
+        success: true,
+        smsStats: sendCancellationSMS ? smsStats : undefined
+      };
     } catch (error) {
       console.error('Error cancelling event:', error);
-      return { 
-        data: null, 
-        error: error as Error,
-        smsResults: {
-          success: false,
-          messagesSent: 0,
-          messagesFailed: 0,
-          totalBookings: 0
-        }
-      };
+      return { success: false, error };
     }
   },
 
