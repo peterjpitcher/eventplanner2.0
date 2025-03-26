@@ -50,6 +50,14 @@ export function BookingList({ eventId, onBookingChange }: BookingListProps) {
 
     try {
       setIsDeleting(bookingId);
+      
+      // Store original bookings for rollback if needed
+      const originalBookings = [...bookings];
+      
+      // Optimistic UI update - remove the booking from the list immediately
+      setBookings(bookings.filter(booking => booking.id !== bookingId));
+      
+      // Attempt the actual deletion
       const { error } = await bookingService.deleteBooking(bookingId);
       
       if (error) {
@@ -57,7 +65,6 @@ export function BookingList({ eventId, onBookingChange }: BookingListProps) {
       }
       
       toast.success('Booking deleted successfully');
-      fetchBookings(); // Refresh the list
       
       // Notify parent component if provided
       if (onBookingChange) {
@@ -65,7 +72,14 @@ export function BookingList({ eventId, onBookingChange }: BookingListProps) {
       }
     } catch (err: any) {
       console.error('Error deleting booking:', err);
+      
+      // Rollback to original bookings list on error
+      setBookings(bookings);
+      
       toast.error(err.message || 'Failed to delete booking. Please try again.');
+      
+      // Fetch fresh data in case server state changed
+      fetchBookings();
     } finally {
       setIsDeleting(null);
     }

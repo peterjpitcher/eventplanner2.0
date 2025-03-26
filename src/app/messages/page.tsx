@@ -1,23 +1,23 @@
+'use client';
+
 import React from 'react';
 import { PageHeader } from '@/components/ui/page-header';
 import { MessagesTable } from './messages-table';
+import { AppLayout } from '@/components/layout/app-layout';
 
-export const metadata = {
-  title: 'SMS Messages | Event Planner',
-  description: 'View and manage customer SMS messages',
-};
-
-export default async function MessagesPage() {
+export default function MessagesPage() {
   return (
-    <div className="container py-6">
-      <PageHeader
-        title="SMS Messages"
-        description="View and manage customer SMS messages and replies"
-      />
-      
-      <div className="bg-white shadow rounded-lg p-6">
-        <MessagesTable />
+    <AppLayout>
+      <div className="container py-6">
+        <PageHeader
+          title="SMS Messages"
+          description="View and manage customer SMS messages and replies"
+        />
+        
+        <div className="bg-white shadow rounded-lg p-6">
+          <MessagesTable />
+        </div>
       </div>
-    </div>
+    </AppLayout>
   );
 } 

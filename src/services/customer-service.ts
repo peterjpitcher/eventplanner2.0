@@ -115,17 +115,71 @@ export const customerService = {
    */
   async deleteCustomer(id: string): Promise<ApiResponse<null>> {
     try {
-      const { error } = await supabase
+      console.log(`Attempting to delete customer with ID: ${id}`);
+      
+      // First check if the customer exists to provide better error messages
+      const { data: existingCustomer, error: checkError } = await supabase
+        .from(CUSTOMERS_TABLE)
+        .select('id')
+        .eq('id', id)
+        .single();
+      
+      if (checkError) {
+        if (checkError.code === 'PGRST116') {
+          console.error(`Customer with ID ${id} not found for deletion`);
+          return { 
+            data: null, 
+            error: new Error(`Customer with ID ${id} not found`) 
+          };
+        }
+        throw checkError;
+      }
+      
+      // Check for related bookings before deletion
+      const { data: relatedBookings, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('customer_id', id)
+        .limit(1);
+      
+      if (bookingsError) {
+        console.error(`Error checking related bookings for customer ${id}:`, bookingsError);
+        // Continue with deletion attempt even if we can't check for bookings
+      } else if (relatedBookings && relatedBookings.length > 0) {
+        console.warn(`Customer ${id} has related bookings. Deletion might be restricted by foreign key constraints.`);
+        // We still attempt to delete, the database will enforce constraints
+      }
+      
+      // Perform the actual deletion
+      const { error: deleteError } = await supabase
         .from(CUSTOMERS_TABLE)
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (deleteError) {
+        console.error(`Error during customer deletion for ID ${id}:`, deleteError);
+        
+        // Check for foreign key violation
+        if (deleteError.code === '23503') { // Foreign key violation
+          return { 
+            data: null, 
+            error: new Error('Cannot delete customer with existing bookings. Remove bookings first.') 
+          };
+        }
+        
+        throw deleteError;
+      }
       
+      console.log(`Successfully deleted customer with ID: ${id}`);
       return { data: null, error: null };
     } catch (error) {
       console.error('Error deleting customer:', error);
-      return { data: null, error: error as Error };
+      return { 
+        data: null, 
+        error: error instanceof Error 
+          ? error 
+          : new Error('Failed to delete customer due to an unknown error') 
+      };
     }
   },
 

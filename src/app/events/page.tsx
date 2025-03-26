@@ -6,6 +6,7 @@ import { EventList } from '@/components/events/event-list';
 import { eventService } from '@/services/event-service';
 import { Event } from '@/services/event-service';
 import { AppLayout } from '@/components/layout/app-layout';
+import { PageHeader } from '@/components/ui/page-header';
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
@@ -37,29 +38,18 @@ export default function EventsPage() {
   return (
     <AppLayout>
       <div className="py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">Events</h1>
-          <Link href="/events/new">
-            <button
-              type="button"
-              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <svg
-                className="-ml-1 mr-2 h-5 w-5"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-                aria-hidden="true"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Add Event
-            </button>
-          </Link>
-        </div>
+        <PageHeader
+          title="Events"
+          description="Manage your upcoming and past events"
+          action={{
+            label: 'Add Event',
+            href: '/events/new'
+          }}
+          secondaryAction={{
+            label: 'Manage Categories',
+            href: '/categories'
+          }}
+        />
         
         <div className="mt-6 bg-white shadow overflow-hidden sm:rounded-lg p-6">
           {loading ? (

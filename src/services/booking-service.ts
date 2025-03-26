@@ -254,16 +254,77 @@ export const bookingService = {
   /**
    * Update an existing booking
    */
-  async updateBooking(id: string, booking: BookingFormData): Promise<ApiResponse<Booking> & { smsSent?: boolean }> {
+  async updateBooking(id: string, bookingData: BookingFormData): Promise<ApiResponse<Booking> & { smsSent?: boolean }> {
     try {
+      // Validate the booking data
+      if (!bookingData.customer_id) {
+        return { 
+          data: null, 
+          error: new Error('Customer ID is required'), 
+          smsSent: false 
+        };
+      }
+      
+      if (!bookingData.event_id) {
+        return { 
+          data: null, 
+          error: new Error('Event ID is required'), 
+          smsSent: false 
+        };
+      }
+      
+      // Validate seats - ensure it's a valid number
+      if (!bookingData.seats_or_reminder) {
+        return { 
+          data: null, 
+          error: new Error('Number of seats is required'), 
+          smsSent: false 
+        };
+      }
+      
+      // Prepare the data for update - handle seat numbers correctly
+      const updateData = {
+        ...bookingData,
+        // Ensure seats_or_reminder is converted to a number if it's a string
+        seats_or_reminder: typeof bookingData.seats_or_reminder === 'string' 
+          ? parseInt(bookingData.seats_or_reminder, 10) 
+          : bookingData.seats_or_reminder
+      };
+      
+      // Check if the number conversion worked
+      if (isNaN(updateData.seats_or_reminder as number)) {
+        return { 
+          data: null, 
+          error: new Error('Invalid number of seats'), 
+          smsSent: false 
+        };
+      }
+      
+      // Make sure seats is a positive number
+      if ((updateData.seats_or_reminder as number) <= 0) {
+        return { 
+          data: null, 
+          error: new Error('Number of seats must be greater than zero'), 
+          smsSent: false 
+        };
+      }
+
+      // Perform the database update
       const { data, error } = await supabase
         .from('bookings')
-        .update(booking)
+        .update(updateData)
         .eq('id', id)
         .select('*')
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error(`Database error updating booking ${id}:`, error);
+        throw error;
+      }
+
+      if (!data) {
+        throw new Error(`Booking with ID ${id} not found or could not be updated`);
+      }
 
       // Fetch related data
       const [customerResult, eventResult] = await Promise.all([
@@ -281,7 +342,7 @@ export const bookingService = {
       let smsSent = false;
 
       // If SMS is enabled and send_notification is true, send an update notification
-      if (process.env.SMS_ENABLED === 'true' && booking.send_notification !== false && updatedBooking) {
+      if (process.env.SMS_ENABLED === 'true' && bookingData.send_notification !== false && updatedBooking) {
         try {
           if (updatedBooking.customer && updatedBooking.event) {
             // Send SMS update notification
@@ -302,6 +363,7 @@ export const bookingService = {
         }
       }
 
+      console.log(`Booking ${id} successfully updated`);
       return {
         data: updatedBooking,
         error: null,
@@ -309,7 +371,13 @@ export const bookingService = {
       };
     } catch (error) {
       console.error(`Error updating booking with ID ${id}:`, error);
-      return { data: null, error: error as Error, smsSent: false };
+      return { 
+        data: null, 
+        error: error instanceof Error 
+          ? error 
+          : new Error(`Failed to update booking: ${String(error)}`), 
+        smsSent: false 
+      };
     }
   },
 
@@ -318,17 +386,58 @@ export const bookingService = {
    */
   async deleteBooking(id: string): Promise<ApiResponse<null>> {
     try {
-      const { error } = await supabase
+      console.log(`Attempting to delete booking with ID: ${id}`);
+      
+      // First check if the booking exists
+      const { data: existingBooking, error: checkError } = await supabase
+        .from('bookings')
+        .select('id')
+        .eq('id', id)
+        .single();
+      
+      if (checkError) {
+        if (checkError.code === 'PGRST116') {
+          console.error(`Booking with ID ${id} not found for deletion`);
+          return { 
+            data: null, 
+            error: new Error(`Booking with ID ${id} not found`) 
+          };
+        }
+        throw checkError;
+      }
+      
+      // Perform the actual deletion
+      const { error: deleteError } = await supabase
         .from('bookings')
         .delete()
         .eq('id', id);
       
-      if (error) throw error;
+      if (deleteError) {
+        console.error(`Error during booking deletion for ID ${id}:`, deleteError);
+        throw deleteError;
+      }
       
+      // Delete any related SMS messages (optional clean-up)
+      try {
+        await supabase
+          .from('sms_messages')
+          .update({ archived: true })
+          .eq('booking_id', id);
+      } catch (smsError) {
+        // Non-critical error, just log it but continue
+        console.warn(`Could not archive SMS messages for booking ${id}:`, smsError);
+      }
+      
+      console.log(`Successfully deleted booking with ID: ${id}`);
       return { data: null, error: null };
     } catch (error) {
       console.error(`Error deleting booking with ID ${id}:`, error);
-      return { data: null, error: error as Error };
+      return { 
+        data: null, 
+        error: error instanceof Error 
+          ? error 
+          : new Error(`Failed to delete booking: ${String(error)}`) 
+      };
     }
   }
 };

@@ -5,14 +5,16 @@ import { Customer } from '@/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { customerService } from '@/services/customer-service';
+import { toast } from 'sonner';
 
 interface CustomerListProps {
   customers: Customer[];
   onCustomerDeleted?: () => void;
 }
 
-export function CustomerList({ customers, onCustomerDeleted }: CustomerListProps) {
+export function CustomerList({ customers: initialCustomers, onCustomerDeleted }: CustomerListProps) {
   const router = useRouter();
+  const [customers, setCustomers] = useState<Customer[]>(initialCustomers);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -22,6 +24,16 @@ export function CustomerList({ customers, onCustomerDeleted }: CustomerListProps
       setIsDeleting(id);
       setDeleteError(null);
       
+      // Optimistic UI update - remove the customer immediately
+      const previousCustomers = [...customers];
+      const customerToDelete = customers.find(c => c.id === id);
+      const customerName = customerToDelete 
+        ? `${customerToDelete.first_name} ${customerToDelete.last_name}`.trim() 
+        : 'Customer';
+      
+      // Filter out the customer to be deleted
+      setCustomers(customers.filter(customer => customer.id !== id));
+      
       try {
         const { error } = await customerService.deleteCustomer(id);
         
@@ -29,13 +41,23 @@ export function CustomerList({ customers, onCustomerDeleted }: CustomerListProps
           throw error;
         }
         
+        // Delete was successful
+        toast.success(`${customerName} has been deleted`);
+        
         // Notify parent component about the deletion
         if (onCustomerDeleted) {
           onCustomerDeleted();
         }
       } catch (error: any) {
         console.error('Error deleting customer:', error);
-        setDeleteError(`Failed to delete customer: ${error.message || 'Unknown error'}`);
+        
+        // Revert the optimistic update on failure
+        setCustomers(previousCustomers);
+        
+        // Show error message
+        const errorMessage = error.message || 'Unknown error';
+        setDeleteError(`Failed to delete customer: ${errorMessage}`);
+        toast.error(`Failed to delete customer: ${errorMessage}`);
       } finally {
         setIsDeleting(null);
       }

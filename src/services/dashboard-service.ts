@@ -22,6 +22,22 @@ export interface DashboardStats {
   totalEvents: number;
 }
 
+// Default empty stats for fallback
+const DEFAULT_STATS: DashboardStats = {
+  upcomingEvents: [],
+  bookingStats: Array.from({ length: 6 }, (_, i) => ({
+    month: format(subMonths(new Date(), 5 - i), 'MMM yyyy'),
+    count: 0
+  })),
+  customerGrowth: Array.from({ length: 6 }, (_, i) => ({
+    month: format(subMonths(new Date(), 5 - i), 'MMM yyyy'),
+    count: 0
+  })),
+  totalCustomers: 0,
+  totalBookings: 0,
+  totalEvents: 0
+};
+
 export const dashboardService = {
   /**
    * Get all dashboard statistics
@@ -34,94 +50,152 @@ export const dashboardService = {
         return format(date, 'yyyy-MM');
       }).reverse();
 
-      // Get upcoming events
-      const { data: upcomingEvents, error: eventsError } = await supabase
-        .from('events')
-        .select('*')
-        .gte('start_time', new Date().toISOString())
-        .order('start_time', { ascending: true })
-        .limit(5);
-      
-      if (eventsError) throw eventsError;
+      // Create partial stats object to fill as we go
+      let partialStats: Partial<DashboardStats> = {};
 
-      // Get booking counts by month
-      const { data: bookingsData, error: bookingsError } = await supabase
-        .from('bookings')
-        .select('created_at')
-        .gte('created_at', subMonths(new Date(), 6).toISOString());
-      
-      if (bookingsError) throw bookingsError;
-
-      // Get customer growth by month
-      const { data: customersData, error: customersError } = await supabase
-        .from('customers')
-        .select('created_at')
-        .gte('created_at', subMonths(new Date(), 6).toISOString());
-      
-      if (customersError) throw customersError;
-
-      // Get total counts
-      const [
-        { count: totalCustomers, error: totalCustomersError },
-        { count: totalBookings, error: totalBookingsError },
-        { count: totalEvents, error: totalEventsError }
-      ] = await Promise.all([
-        supabase.from('customers').select('*', { count: 'exact', head: true }),
-        supabase.from('bookings').select('*', { count: 'exact', head: true }),
-        supabase.from('events').select('*', { count: 'exact', head: true })
-      ]);
-
-      if (totalCustomersError || totalBookingsError || totalEventsError) {
-        throw new Error('Failed to fetch totals');
+      // Get upcoming events - if this fails, we use empty array
+      try {
+        const { data: upcomingEvents, error: eventsError } = await supabase
+          .from('events')
+          .select('*')
+          .gte('start_time', new Date().toISOString())
+          .order('start_time', { ascending: true })
+          .limit(5);
+        
+        if (eventsError) {
+          console.error('Failed to fetch upcoming events:', eventsError);
+        } else {
+          partialStats.upcomingEvents = upcomingEvents || [];
+        }
+      } catch (err) {
+        console.error('Error in upcoming events query:', err);
       }
 
-      // Process booking stats by month
-      const bookingStats: BookingStat[] = months.map(month => {
-        const count = bookingsData?.filter(booking => {
-          const bookingDate = parseISO(booking.created_at);
-          const bookingMonth = format(bookingDate, 'yyyy-MM');
-          return bookingMonth === month;
-        })?.length || 0;
+      // Get booking counts - if this fails, we use empty stats
+      try {
+        const { data: bookingsData, error: bookingsError } = await supabase
+          .from('bookings')
+          .select('created_at')
+          .gte('created_at', subMonths(new Date(), 6).toISOString());
+        
+        if (bookingsError) {
+          console.error('Failed to fetch bookings data:', bookingsError);
+        } else {
+          // Process booking stats by month
+          const bookingStats: BookingStat[] = months.map(month => {
+            const count = bookingsData?.filter(booking => {
+              const bookingDate = parseISO(booking.created_at);
+              const bookingMonth = format(bookingDate, 'yyyy-MM');
+              return bookingMonth === month;
+            })?.length || 0;
 
-        return {
-          month: format(parseISO(`${month}-01`), 'MMM yyyy'),
-          count
-        };
-      });
+            return {
+              month: format(parseISO(`${month}-01`), 'MMM yyyy'),
+              count
+            };
+          });
+          
+          partialStats.bookingStats = bookingStats;
+        }
+      } catch (err) {
+        console.error('Error in bookings query:', err);
+      }
 
-      // Process customer growth by month
-      const customersByMonth: Record<string, number> = {};
+      // Get customer growth - if this fails, we use empty stats
+      try {
+        const { data: customersData, error: customersError } = await supabase
+          .from('customers')
+          .select('created_at')
+          .gte('created_at', subMonths(new Date(), 6).toISOString());
+        
+        if (customersError) {
+          console.error('Failed to fetch customers data:', customersError);
+        } else {
+          // Process customer growth by month
+          const customersByMonth: Record<string, number> = {};
+          
+          customersData?.forEach(customer => {
+            const date = parseISO(customer.created_at);
+            const monthKey = format(date, 'yyyy-MM');
+            customersByMonth[monthKey] = (customersByMonth[monthKey] || 0) + 1;
+          });
+
+          // Create cumulative growth
+          let cumulativeCount = 0;
+          const customerGrowth: CustomerGrowth[] = months.map(month => {
+            cumulativeCount += customersByMonth[month] || 0;
+            return {
+              month: format(parseISO(`${month}-01`), 'MMM yyyy'),
+              count: cumulativeCount
+            };
+          });
+          
+          partialStats.customerGrowth = customerGrowth;
+        }
+      } catch (err) {
+        console.error('Error in customers query:', err);
+      }
+
+      // Get total counts - attempt each independently
+      try {
+        const { count: totalCustomers, error: totalCustomersError } = await supabase
+          .from('customers')
+          .select('*', { count: 'exact', head: true });
+        
+        if (!totalCustomersError) {
+          partialStats.totalCustomers = totalCustomers || 0;
+        } else {
+          console.error('Failed to fetch total customers:', totalCustomersError);
+        }
+      } catch (err) {
+        console.error('Error in total customers query:', err);
+      }
       
-      customersData?.forEach(customer => {
-        const date = parseISO(customer.created_at);
-        const monthKey = format(date, 'yyyy-MM');
-        customersByMonth[monthKey] = (customersByMonth[monthKey] || 0) + 1;
-      });
+      try {
+        const { count: totalBookings, error: totalBookingsError } = await supabase
+          .from('bookings')
+          .select('*', { count: 'exact', head: true });
+        
+        if (!totalBookingsError) {
+          partialStats.totalBookings = totalBookings || 0;
+        } else {
+          console.error('Failed to fetch total bookings:', totalBookingsError);
+        }
+      } catch (err) {
+        console.error('Error in total bookings query:', err);
+      }
+      
+      try {
+        const { count: totalEvents, error: totalEventsError } = await supabase
+          .from('events')
+          .select('*', { count: 'exact', head: true });
+        
+        if (!totalEventsError) {
+          partialStats.totalEvents = totalEvents || 0;
+        } else {
+          console.error('Failed to fetch total events:', totalEventsError);
+        }
+      } catch (err) {
+        console.error('Error in total events query:', err);
+      }
 
-      // Create cumulative growth
-      let cumulativeCount = 0;
-      const customerGrowth: CustomerGrowth[] = months.map(month => {
-        cumulativeCount += customersByMonth[month] || 0;
-        return {
-          month: format(parseISO(`${month}-01`), 'MMM yyyy'),
-          count: cumulativeCount
-        };
-      });
+      // Merge partial stats with defaults for any missing data
+      const completeStats: DashboardStats = {
+        ...DEFAULT_STATS,
+        ...partialStats
+      };
 
       return {
-        data: {
-          upcomingEvents: upcomingEvents || [],
-          bookingStats,
-          customerGrowth,
-          totalCustomers: totalCustomers || 0,
-          totalBookings: totalBookings || 0,
-          totalEvents: totalEvents || 0
-        },
+        data: completeStats,
         error: null
       };
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
-      return { data: null, error: error as Error };
+      // Return default stats on complete failure
+      return { 
+        data: DEFAULT_STATS, 
+        error: error as Error 
+      };
     }
   }
 };

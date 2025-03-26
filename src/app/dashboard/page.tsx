@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { PageHeader } from '@/components/ui/page-header';
 import { AppLayout } from '@/components/layout/app-layout';
 import { BookingStatsChart } from '@/components/dashboard/booking-stats-chart';
@@ -57,6 +56,9 @@ export default function Dashboard() {
     fetchDashboardData();
   };
 
+  // Format the timestamp for last refreshed
+  const lastRefreshed = new Date().toLocaleTimeString();
+
   return (
     <AppLayout>
       <div className="flex justify-between items-center mb-6">
@@ -86,9 +88,15 @@ export default function Dashboard() {
       
       {error && (
         <Alert variant="error" className="mb-6">
-          Failed to load dashboard data. Please try again later.
+          <p className="font-semibold">Error loading dashboard data</p>
+          <p className="text-sm mt-1">{error.message || 'Please try again later'}</p>
+          <p className="text-xs mt-2">Some data may be unavailable or incomplete.</p>
         </Alert>
       )}
+
+      <div className="text-xs text-gray-500 mb-4">
+        Last updated: {lastRefreshed}
+      </div>
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -141,29 +149,6 @@ export default function Dashboard() {
           events={dashboardData.upcomingEvents} 
           isLoading={isLoading} 
         />
-      </div>
-      
-      {/* Quick Navigation Links */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Link href="/events" className="block p-4 bg-blue-50 rounded-lg border border-blue-200 hover:bg-blue-100 transition-colors">
-          <h3 className="font-medium text-blue-700">Manage Events</h3>
-          <p className="text-sm text-blue-600 mt-1">View, create, and edit your events</p>
-        </Link>
-        
-        <Link href="/customers" className="block p-4 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 transition-colors">
-          <h3 className="font-medium text-green-700">Customer Directory</h3>
-          <p className="text-sm text-green-600 mt-1">Browse and manage your customers</p>
-        </Link>
-        
-        <Link href="/bookings" className="block p-4 bg-purple-50 rounded-lg border border-purple-200 hover:bg-purple-100 transition-colors">
-          <h3 className="font-medium text-purple-700">Booking Management</h3>
-          <p className="text-sm text-purple-600 mt-1">Handle event bookings and reservations</p>
-        </Link>
-        
-        <Link href="/categories" className="block p-4 bg-yellow-50 rounded-lg border border-yellow-200 hover:bg-yellow-100 transition-colors">
-          <h3 className="font-medium text-yellow-700">Event Categories</h3>
-          <p className="text-sm text-yellow-600 mt-1">Organize events by categories</p>
-        </Link>
       </div>
     </AppLayout>
   );

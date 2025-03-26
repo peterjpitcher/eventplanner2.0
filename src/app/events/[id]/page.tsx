@@ -4,8 +4,12 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { EventDetails } from '@/components/events/event-details';
+import { BookingList } from '@/components/bookings/booking-list';
+import { QuickBook } from '@/components/bookings/quick-book';
 import { eventService } from '@/services/event-service';
 import { AppLayout } from '@/components/layout/app-layout';
+import { Alert } from '@/components/ui/alert';
+import { Spinner } from '@/components/ui/spinner';
 
 interface EventPageProps {
   params: {
@@ -19,6 +23,7 @@ export default function EventPage({ params }: EventPageProps) {
   const [event, setEvent] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [refreshBookings, setRefreshBookings] = useState(0);
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -46,11 +51,18 @@ export default function EventPage({ params }: EventPageProps) {
     fetchEvent();
   }, [id]);
 
+  // Handler for when a booking is added or changed
+  const handleBookingChange = () => {
+    setRefreshBookings(prev => prev + 1); // Increment to trigger a refresh
+  };
+
   if (isLoading) {
     return (
       <AppLayout>
         <div className="text-center py-10">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto"></div>
+          <div className="flex justify-center">
+            <Spinner size="lg" />
+          </div>
           <p className="mt-2 text-gray-500">Loading event details...</p>
         </div>
       </AppLayout>
@@ -60,7 +72,7 @@ export default function EventPage({ params }: EventPageProps) {
   if (error || !event) {
     return (
       <AppLayout>
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+        <Alert variant="error">
           <strong className="font-bold">Error:</strong>
           <span className="block sm:inline"> {error ? error.message : 'Event not found'}</span>
           <div className="mt-4">
@@ -71,7 +83,7 @@ export default function EventPage({ params }: EventPageProps) {
               Back to Events
             </button>
           </div>
-        </div>
+        </Alert>
       </AppLayout>
     );
   }
@@ -88,6 +100,27 @@ export default function EventPage({ params }: EventPageProps) {
           <div className="px-6 py-8">
             <EventDetails event={event} />
           </div>
+        </div>
+        
+        {/* Bookings Section */}
+        <div className="mt-8">
+          <h2 className="text-xl font-bold text-gray-900 mb-4">Event Bookings</h2>
+          
+          <div className="bg-white shadow-sm rounded-lg border border-gray-200 mb-6">
+            <div className="px-6 py-8">
+              <BookingList 
+                eventId={id} 
+                onBookingChange={handleBookingChange}
+                key={refreshBookings} // Force re-render when refreshBookings changes
+              />
+            </div>
+          </div>
+          
+          {/* Quick Book Form */}
+          <QuickBook 
+            eventId={id} 
+            onSuccess={handleBookingChange}
+          />
         </div>
       </div>
     </AppLayout>
