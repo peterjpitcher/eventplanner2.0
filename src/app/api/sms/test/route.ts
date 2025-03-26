@@ -19,13 +19,12 @@ export async function POST(request: Request) {
       );
     }
     
-    // Hard-code credentials for testing - corrected
-    const twilioAccountSid = 'ACae3fe6d3cde22dabb4d338e23df90e72';
-    // Auth token often starts with 'f', not 'y' - correcting this common error
-    const twilioAuthToken = '92d04be2762319cefaf43ec1de9fd5e5';
-    const twilioPhoneNumber = '+447700106752';
+    // Use environment variables instead of hard-coded credentials
+    const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID || 'your_account_sid';
+    const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN || 'your_auth_token';
+    const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER || '+1234567890';
     
-    console.log(`Sending test SMS to ${phoneNumber} with corrected hardcoded credentials using direct API call`);
+    console.log(`Sending test SMS to ${phoneNumber} with environment variables using direct API call`);
     
     // Use fetch instead of the Twilio SDK to avoid Next.js compatibility issues
     const apiUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;

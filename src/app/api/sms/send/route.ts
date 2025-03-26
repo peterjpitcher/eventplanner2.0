@@ -19,10 +19,10 @@ export async function POST(request: Request) {
       );
     }
     
-    // Hard-coded credentials for testing
-    const twilioAccountSid = 'ACae3fe6d3cde22dabb4d338e23df90e72';
-    const twilioAuthToken = '92d04be2762319cefaf43ec1de9fd5e5';
-    const twilioPhoneNumber = '+447700106752';
+    // Use environment variables instead of hard-coded credentials
+    const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID || 'your_account_sid';
+    const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN || 'your_auth_token';
+    const twilioPhoneNumber = process.env.TWILIO_PHONE_NUMBER || '+1234567890';
     
     console.log(`Simple SMS test: To ${phoneNumber}, Message: ${messageContent.substring(0, 30)}...`);
     

@@ -5,7 +5,7 @@ import { AppLayout } from '@/components/layout/app-layout';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { formatUKMobileNumber } from '@/lib/phone-utils';
-import { testTwilioConnection, checkAndEnsureSmsConfig } from '@/lib/sms-utils';
+import { checkAndEnsureSmsConfig } from '@/lib/sms-utils';
 
 /**
  * Temporary SMS testing page
@@ -53,26 +53,26 @@ export default function TempSmsTestPage() {
       
       // Direct implementation without relying on API call
       try {
-        // Hard-code credentials for testing - corrected
-        const accountSid = 'ACae3fe6d3cde22dabb4d338e23df90e72';
-        const authToken = '92d04be2762319cefaf43ec1de9fd5e5';
-        const twilioPhoneNumber = '+447700106752';
+        // Use environment variables instead of hard-coded credentials
+        const accountSid = process.env.NEXT_PUBLIC_TWILIO_ACCOUNT_SID || 'your_account_sid';
+        const authToken = process.env.NEXT_PUBLIC_TWILIO_AUTH_TOKEN || 'your_auth_token';
+        const twilioPhoneNumber = process.env.NEXT_PUBLIC_TWILIO_PHONE_NUMBER || '+1234567890';
       
-        // Create mock config data based on hardcoded values
+        // Create mock config data based on environment variables
         const config = {
           smsEnabled: true,
-          message: 'SMS enabled with hardcoded credentials',
-          twilioAccountSid: `${accountSid.substring(0, 8)}...`,
-          twilioAuthToken: true,
+          message: 'SMS enabled with environment variables',
+          twilioAccountSid: accountSid.startsWith('your_') ? accountSid : `${accountSid.substring(0, 8)}...`,
+          twilioAuthToken: !!authToken && authToken !== 'your_auth_token',
           twilioPhoneNumber: twilioPhoneNumber,
         };
         
         setSmsConfig(config);
         addLog(`SMS configuration loaded: Enabled`);
-        addLog('SMS enabled with hardcoded credentials');
+        addLog('SMS enabled with environment variables');
       } catch (err: any) {
-        console.error('Error setting hardcoded SMS config:', err);
-        throw new Error('Failed to set hardcoded SMS configuration');
+        console.error('Error setting SMS config from environment:', err);
+        throw new Error('Failed to set SMS configuration from environment variables');
       }
     } catch (err: any) {
       console.error('Error checking SMS config:', err);
@@ -89,9 +89,9 @@ export default function TempSmsTestPage() {
     try {
       addLog('Testing Twilio connection...');
       
-      // Direct implementation using fetch
-      const accountSid = 'ACae3fe6d3cde22dabb4d338e23df90e72';
-      const authToken = '92d04be2762319cefaf43ec1de9fd5e5';
+      // Use environment variables instead of hard-coded credentials
+      const accountSid = process.env.NEXT_PUBLIC_TWILIO_ACCOUNT_SID || 'your_account_sid';
+      const authToken = process.env.NEXT_PUBLIC_TWILIO_AUTH_TOKEN || 'your_auth_token';
       
       const apiUrl = `https://api.twilio.com/2010-04-01/Accounts/${accountSid}.json`;
       const authHeaderValue = Buffer.from(`${accountSid}:${authToken}`).toString('base64');

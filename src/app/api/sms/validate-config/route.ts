@@ -2,12 +2,11 @@ import { NextResponse } from 'next/server';
 
 export async function GET() {
   try {
-    // Hard-code credentials for testing - corrected
-    const twilioAccountSid = 'ACae3fe6d3cde22dabb4d338e23df90e72';
-    // Auth token often starts with 'f', not 'y' - correcting this common error
-    const twilioAuthToken = '92d04be2762319cefaf43ec1de9fd5e5';
+    // Use environment variables instead of hard-coded credentials
+    const twilioAccountSid = process.env.TWILIO_ACCOUNT_SID || 'your_account_sid';
+    const twilioAuthToken = process.env.TWILIO_AUTH_TOKEN || 'your_auth_token';
     
-    console.log('Validating Twilio config with corrected hardcoded credentials using direct API call');
+    console.log('Validating Twilio config using environment variables');
     
     // Use fetch instead of the Twilio SDK to avoid Next.js compatibility issues
     const apiUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}.json`;
