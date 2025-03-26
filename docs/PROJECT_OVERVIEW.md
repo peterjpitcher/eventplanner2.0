@@ -158,9 +158,14 @@ The application is deployed on Vercel. To deploy:
 
 Additional documentation is available in the `/docs` directory:
 
-- `HANDOVER.md`: Comprehensive handover documentation
-- `IMPLEMENTATION_PLAN_V1.4.md`: Current implementation plan
-- `SMS_SETUP.md`: Twilio integration setup guide
+- `README.md`: Project overview and setup instructions
+- `ARCHITECTURE.md`: System architecture overview
+- `DATABASE_SCHEMA.md`: Database schema details
+- `NAVIGATION.md`: Navigation structure and routing
+- `BOOKING_MANAGEMENT.md`: Booking system documentation
+- `CUSTOMER_MANAGEMENT.md`: Customer management features
+- `sms-integration.md`: Comprehensive SMS integration guide
+- `DEPLOYMENT.md`: Deployment instructions
 
 ## Conclusion
 

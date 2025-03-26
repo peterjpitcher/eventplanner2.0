@@ -188,7 +188,10 @@ Based on additional testing, the following issues have been identified:
 **Key Files**:
 - `.env.example` (new file)
 - `src/services/sms-service.ts`
-- `docs/SMS_SETUP.md` (new file)
+- `src/lib/sms-utils.ts`
+- `src/pages/admin/sms-templates.tsx`
+- `src/components/sms/TestMessageForm.tsx`
+- `docs/sms-integration.md`
 
 ### Phase 6: Testing and Stabilization (Priority: High)
 

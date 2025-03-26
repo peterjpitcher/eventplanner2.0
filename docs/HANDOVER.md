@@ -272,42 +272,25 @@ A comprehensive implementation plan has been created to address all issues. Refe
 ### SMS Integration
 
 The application includes SMS functionality powered by Twilio. This allows for:
+- Sending booking confirmations
+- Sending booking reminders
+- Sending cancellation notifications
+- Processing customer replies
 
-1. **Automated Notifications**
-   - Booking confirmations
-   - Event reminders (24h and 7-day)
-   - Booking cancellations
-   - Event cancellations
+For detailed setup instructions, refer to the `docs/sms-integration.md` file.
 
-2. **Template Management**
-   - Customizable message templates
-   - Support for dynamic content via placeholders
-   - Template testing capability (planned)
+### Required Environment Variables
 
-3. **Message History**
-   - Tracking of all sent messages
-   - Delivery status monitoring
-   - Filtering by customer or booking
+The application requires the following environment variables:
 
-For detailed setup instructions, refer to the `docs/SMS_SETUP.md` file.
-
-### Known Issues and Workarounds
-
-1. **Customer Deletion**
-   - **Issue**: Error appears even when deletion succeeds
-   - **Workaround**: Refresh the page after deletion to see updated customer list
-
-2. **Dashboard Upcoming Events**
-   - **Issue**: Events not displaying on dashboard
-   - **Workaround**: Use the main Events page to view upcoming events
-
-3. **Category Deletion**
-   - **Issue**: Categories cannot be deleted
-   - **Workaround**: None currently available
-
-4. **SMS Notifications**
-   - **Issue**: SMS not sending on booking creation
-   - **Workaround**: Send messages manually from the Messages page
+- DATABASE_URL
+- SUPABASE_URL
+- SUPABASE_ANON_KEY
+- TWILIO_ACCOUNT_SID
+- TWILIO_AUTH_TOKEN
+- TWILIO_PHONE_NUMBER
+- SMS_ENABLED
+- SMS_DEFAULT_COUNTRY_CODE (optional, defaults to 44 for UK)
 
 ## Development Guidelines
 
@@ -380,7 +363,7 @@ Required environment variables:
 
 ### Project Documentation
 - `docs/IMPLEMENTATION_PLAN_V1.4.md`: Current implementation plan
-- `docs/SMS_SETUP.md`: Twilio integration setup guide
+- `docs/sms-integration.md`: Twilio integration setup guide
 - `.env.example`: Example environment configuration
 
 ### Getting Help
@@ -406,3 +389,11 @@ The project has experienced routing issues and feature implementation problems i
 ---
 
 Last Updated: March 26, 2024 
+
+### Additional Documentation
+
+- `docs/ARCHITECTURE.md`: System architecture overview
+- `docs/DATABASE_SCHEMA.md`: Database schema details
+- `docs/NAVIGATION.md`: Navigation structure
+- `docs/sms-integration.md`: Comprehensive SMS integration guide
+- `docs/DEPLOYMENT.md`: Deployment instructions
