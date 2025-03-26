@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { SMSService } from '@/services/sms-service';
+import { smsService } from '@/services/sms-service';
 import { processTemplate } from '@/lib/templates';
 import { formatPhoneNumber } from '@/lib/phone-utils';
 
@@ -18,7 +18,6 @@ export default function TestMessageForm({ templateId, templateName }: TestMessag
   const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const smsService = new SMSService();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

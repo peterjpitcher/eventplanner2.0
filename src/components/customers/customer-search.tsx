@@ -25,12 +25,10 @@ export function CustomerSearch({ onSearch }: CustomerSearchProps) {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Perform the search when debounced query changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
-    if (debouncedQuery !== undefined) {
-      handleSearch();
-    }
-  }, [debouncedQuery, searchType]);
+    handleSearch();
+  }, []);
 
   // Handle search form submission
   const handleSearch = useCallback(() => {

@@ -15,6 +15,7 @@ export default function SMSTemplatesPage() {
   const [activeTemplate, setActiveTemplate] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('editor');
   
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadTemplates();
   }, []);

@@ -84,7 +84,7 @@ export function EventCancellationDialog({
                 <AlertCircle className="text-red-500 h-5 w-5 mt-0.5 mr-2 flex-shrink-0" />
                 <div>
                   <p className="font-medium text-gray-900">
-                    Are you sure you want to cancel "{event.title}"?
+                    Are you sure you want to cancel &quot;{event.title}&quot;?
                   </p>
                   <p className="text-gray-600 text-sm mt-1">
                     This action cannot be undone. The event will be marked as cancelled and will no longer be available for bookings.
@@ -146,7 +146,7 @@ export function EventCancellationDialog({
                 Event Cancelled
               </h3>
               <p className="text-gray-600">
-                "{event.title}" has been successfully cancelled.
+                &quot;{event.title}&quot; has been successfully cancelled.
               </p>
               
               <div className="mt-6 mb-4">

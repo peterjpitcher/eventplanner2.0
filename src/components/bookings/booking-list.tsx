@@ -20,9 +20,10 @@ export function BookingList({ eventId, onBookingChange }: BookingListProps) {
   const [isDeleting, setIsDeleting] = useState<string | null>(null); // Track which booking is being deleted
   const [error, setError] = useState<string | null>(null);
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchBookings();
-  }, [eventId]);
+  }, []);
 
   const fetchBookings = async () => {
     try {

@@ -28,7 +28,7 @@ export default function TempSmsTestPage() {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [messageContent, setMessageContent] = useState('This is a test message from Event Planner app.');
   
-  // Fetch SMS configuration on load
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     fetchSmsConfig();
   }, []);
