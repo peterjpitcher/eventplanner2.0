@@ -75,19 +75,30 @@ event-planner/
 
 Comprehensive documentation is available in the `docs/` directory:
 
-- [Product Requirements](docs/PRD.md)
-- [Development Workflow](docs/WORKFLOW.md)
 - [Architecture Overview](docs/ARCHITECTURE.md)
-- [Setup Guide](docs/SETUP.md)
-- [Database Setup](docs/DATABASE_SETUP.sql)
-- [API Documentation](docs/API.md)
-- [Testing Strategies](docs/TESTING.md)
-- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
-- [Project Decisions](docs/DECISIONS.md)
 - [Authentication Flow](docs/AUTHENTICATION.md)
-- [Navigation Components](docs/NAVIGATION.md)
 - [Booking Management](docs/BOOKING_MANAGEMENT.md)
+- [Changelog](docs/CHANGELOG.md)
+- [Customer Management](docs/CUSTOMER_MANAGEMENT.md)
+- [Database Schema](docs/DATABASE_SCHEMA.md)
+- [Database Setup](docs/DATABASE_SETUP.sql)
+- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Development Notes](docs/DEVELOPMENT_NOTES.md)
+- [Development Workflow](docs/DEVELOPMENT_WORKFLOW.md)
+- [Implementation Plan](docs/IMPLEMENTATION_PLAN.md)
+- [Mobile Functionality](docs/MOBILE_FUNCTIONALITY.md)
+- [Mobile Optimization](docs/MOBILE_OPTIMIZATION.md)
+- [Navigation Components](docs/NAVIGATION.md)
+- [Project Decisions](docs/DECISIONS.md)
 - [SMS Integration](docs/SMS_INTEGRATION.md)
+
+Additional documentation is available in subdirectories:
+- [API Documentation](docs/api/)
+- [Architecture Details](docs/architecture/)
+- [Setup Guides](docs/setup/)
+- [Testing Documentation](docs/testing/)
+- [User Guides](docs/user-guides/)
+- [Workflow Guides](docs/workflows/)
 
 ## Project Status
 
