@@ -612,3 +612,73 @@ Phase 15 focuses on making the application fully responsive and mobile-friendly.
    - Optimize Core Web Vitals for mobile devices
 
 > For detailed technical implementation details of the mobile optimization process, see [MOBILE_OPTIMIZATION.md](./MOBILE_OPTIMIZATION.md)
+
+## Routing Structure Decisions
+
+### [2024-03-26] Route Group Removal and AppLayout Component
+
+**Decision**: Remove the (dashboard) route group and implement an AppLayout component to be used across all pages.
+
+**Context**: 
+- The application was experiencing 404 errors and route conflicts in production.
+- The (dashboard) route group was conflicting with regular routes that had the same path.
+- Pages in different places were trying to render the same routes, causing Next.js build errors.
+
+**Options Considered**:
+1. Keep the route group and fix individual routes
+2. Remove the route group and implement a layout component
+3. Restructure the entire application routing
+
+**Decision Rationale**:
+- Option 2 provided the clearest path forward with minimal disruption
+- Using a layout component gives more explicit control over page structure
+- Avoiding route groups simplifies the routing structure and prevents future conflicts
+- This approach follows Next.js best practices for component-based layouts
+
+**Implementation Details**:
+- Created an AppLayout component that encapsulates authentication, navigation, and layout logic
+- Removed all pages from the (dashboard) route group
+- Updated regular routes to use the AppLayout component
+- Created a comprehensive implementation plan (IMPLEMENTATION_PLAN_V1.1.md) to address all issues systematically
+
+**Consequences**:
+- Positive: Clearer, more explicit control over which pages use which layouts
+- Positive: Simpler routing structure that's easier to understand and maintain
+- Negative: Required updates to multiple files and navigation links
+- Negative: Temporarily introduced 404 errors until all routes are properly updated
+
+## Project Management Decisions
+
+### [2024-03-26] Implementation Plan for Production Issues
+
+**Decision**: Create a comprehensive implementation plan to address all production issues systematically.
+
+**Context**:
+- Multiple features were experiencing 404 errors and functionality issues in production.
+- The dashboard was missing required visualizations and charts.
+- Form submissions weren't working correctly in several parts of the application.
+
+**Options Considered**:
+1. Fix issues as they arise without a structured plan
+2. Create a detailed implementation plan with phases and priorities
+3. Roll back to a previous stable version and rebuild
+
+**Decision Rationale**:
+- Option 2 provides a systematic approach to addressing all issues
+- A phased implementation allows for testing after each component is fixed
+- Setting priorities ensures critical functionality is restored first
+- Documentation of the plan helps with progress tracking and handover
+
+**Implementation Details**:
+- Created IMPLEMENTATION_PLAN_V1.1.md with 8 phases
+- Prioritized routing fixes as the highest priority
+- Established dependencies between phases
+- Provided time estimates and resource requirements
+- Added detailed tasks for each phase
+
+**Consequences**:
+- Positive: Clear roadmap for addressing all issues
+- Positive: Structured approach that can be followed by any developer
+- Positive: Better visibility into project status and progress
+- Negative: Time needed to create the plan before starting fixes
+- Negative: Plan may need adjustment as implementation progresses
