@@ -2,6 +2,26 @@
 
 This document contains important notes and decisions made during the development process that might be useful for future reference.
 
+## Routing Structure Changes
+
+### Migration from Route Groups to Flat Structure
+
+The application initially used Next.js route groups with a `(dashboard)` group wrapping authenticated pages. This approach was causing 404 errors and routing conflicts. The implementation has been updated to use a flat route structure instead.
+
+Key changes:
+- Removed the `src/app/(dashboard)` route group (keeping only a README as a placeholder)
+- Ensured all page components consistently use the `AppLayout` component
+- Converted server components to client components (`'use client'`) for consistent data fetching patterns
+- Updated documentation to reflect the new routing structure
+
+This change simplifies the codebase by:
+- Creating a more predictable routing pattern
+- Eliminating potential conflicts between route groups and regular routes
+- Ensuring all pages have consistent layouts and navigation
+- Making it easier to add new routes in the future
+
+The flat route structure means all routes are now directly under `src/app/`, such as `/dashboard`, `/customers`, `/events`, etc., and they all use the `AppLayout` component to maintain UI consistency.
+
 ## Database Schema Evolution
 
 ### Events Table Structure
@@ -89,4 +109,4 @@ EXECUTE FUNCTION update_modified_column();
 ## Technical Debt
 
 - The event form and detail components still include UI elements for fields that aren't actually stored in the database.
-- This will be addressed in Phase 18 of the implementation plan. 
+- This will be addressed in Phase 18 of the implementation plan.

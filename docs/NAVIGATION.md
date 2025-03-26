@@ -55,22 +55,47 @@ The application's navigation is organized around these main sections:
 3. **Event Categories** - Management of event categories (desktop only)
 4. **Events** - Event creation and management
 5. **Bookings** - Booking management features
-6. **Profile** - User profile and account settings (mobile only)
+6. **Messages** - SMS reply management
+7. **Profile** - User profile and account settings (mobile only)
 
-## Route Groups and Layouts
+## Route Structure and Layouts
 
-The navigation is implemented within the context of Next.js route groups and layouts:
+The navigation is implemented using a consistent layout pattern:
 
-### Dashboard Layout
+### AppLayout Component
 
-The Dashboard layout (`src/app/(dashboard)/layout.tsx`) wraps all authenticated pages and includes:
+The `AppLayout` component (`src/components/layout/app-layout.tsx`) wraps all authenticated pages and includes:
 
 1. Authentication check with loading state
 2. Desktop sidebar navigation
 3. Mobile bottom navigation
 4. Content area with appropriate padding and layout
 
-This layout ensures consistent navigation across all authenticated pages while handling authentication status.
+This layout ensures consistent navigation across all authenticated pages while handling authentication status. All route pages use this component as their wrapper to maintain a consistent UI.
+
+### Route Structure
+
+The application uses a flat route structure with the following main routes:
+
+- `/dashboard` - Main dashboard
+- `/customers` - Customer listing
+- `/customers/new` - New customer form
+- `/customers/[id]` - Customer details
+- `/customers/[id]/edit` - Edit customer
+- `/events` - Event listing
+- `/events/new` - New event form
+- `/events/[id]` - Event details
+- `/events/[id]/edit` - Edit event
+- `/categories` - Category listing
+- `/categories/new` - New category form
+- `/categories/[id]` - Category details
+- `/categories/[id]/edit` - Edit category
+- `/bookings` - Booking listing
+- `/bookings/new` - New booking form
+- `/bookings/[id]` - Booking details
+- `/bookings/[id]/edit` - Edit booking
+- `/messages` - Message listing
+- `/profile` - User profile
 
 ## Navigation Item Definition
 
@@ -81,6 +106,7 @@ interface NavItem {
   name: string;
   href: string;
   icon: (props: React.SVGProps<SVGSVGElement>) => JSX.Element;
+  badge?: number; // For notification counts (e.g., unread messages)
 }
 ```
 
@@ -88,6 +114,7 @@ This structured approach allows for:
 - Consistent rendering of navigation items
 - Type-safe definitions
 - Easy addition or modification of navigation items
+- Support for notification badges
 
 ## Active State Detection
 
