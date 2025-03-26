@@ -8,33 +8,52 @@ import { eventService } from '@/services/event-service';
 import { Event } from '@/services/event-service';
 import { AppLayout } from '@/components/layout/app-layout';
 import { PageHeader } from '@/components/ui/page-header';
+import { useRequireAuth } from '@/hooks/use-require-auth';
 
 export default function EventsPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<any>(null);
+  
+  // Use the auth hook to handle redirects and auth state
+  const { user, isLoading: authLoading } = useRequireAuth();
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const { data, error } = await eventService.getEvents();
+    // Only fetch data if we have a user and auth is not loading
+    if (user && !authLoading) {
+      const fetchData = async () => {
+        try {
+          const { data, error } = await eventService.getEvents();
 
-        if (error) {
-          console.error('Error fetching events:', error);
-          setError(error);
-        } else {
-          setEvents(data || []);
+          if (error) {
+            console.error('Error fetching events:', error);
+            setError(error);
+          } else {
+            setEvents(data || []);
+          }
+        } catch (err) {
+          console.error('Error fetching data:', err);
+          setError(err);
+        } finally {
+          setLoading(false);
         }
-      } catch (err) {
-        console.error('Error fetching data:', err);
-        setError(err);
-      } finally {
-        setLoading(false);
-      }
-    };
+      };
 
-    fetchData();
-  }, []);
+      fetchData();
+    }
+  }, [user, authLoading]);
+
+  // Don't render anything while auth is loading
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-100">
+        <div className="flex flex-col items-center space-y-4 p-6 max-w-md mx-auto text-center">
+          <div className="h-8 w-8 text-blue-600 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"></div>
+          <h2 className="text-xl font-semibold text-gray-800">Loading...</h2>
+        </div>
+      </div>
+    );
+  }
 
   // Render based on screen size
   const renderEvents = () => {
