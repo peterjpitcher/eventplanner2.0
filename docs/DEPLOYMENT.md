@@ -1,118 +1,161 @@
-# Deployment Guide
+# Deployment Guide for Event Planner 2.0
+
+This document provides instructions for deploying the Event Planner 2.0 application to production environments.
 
 ## Prerequisites
-- Node.js 18.x or later
-- npm 9.x or later
-- Vercel CLI (optional)
-- Supabase account and project
 
-## Environment Setup
-1. Create a `.env.local` file in the project root with the following variables:
-```env
-NEXT_PUBLIC_SUPABASE_URL=https://hxbbcbjunrovtkpcheul.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4YmJjYmp1bnJvdnRrcGNoZXVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MTkwMTksImV4cCI6MjA1ODQ5NTAxOX0.UJJ6xTLr9C1zLOS6bNYHrsUPsq6eA9NTKKXiyVLhmTk
+Before deploying, ensure you have:
+
+1. A GitHub account with access to the repository
+2. A Vercel account for frontend deployment
+3. A Supabase account for backend services
+4. A Twilio account for SMS functionality (optional)
+
+## Environment Variables
+
+The following environment variables must be set in your production environment:
+
+### Essential Variables
+```
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-## Database Setup
-1. Run the Supabase migrations:
-```bash
-supabase db push
+### SMS Functionality Variables (Optional)
+```
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token
+TWILIO_PHONE_NUMBER=your_twilio_phone_number
+NEXT_PUBLIC_SMS_ENABLED=true
 ```
 
-2. Verify the database schema:
-```bash
-supabase db dump
-```
+## Deployment Steps
 
-## Local Development
-1. Install dependencies:
-```bash
-npm install
-```
+### 1. Database Setup with Supabase
 
-2. Start the development server:
-```bash
-npm run dev
-```
+1. Create a new project in Supabase
+2. Run the database migrations:
+   - Navigate to the SQL Editor in Supabase
+   - Copy the content from `supabase/migrations` files
+   - Execute the SQL scripts in order
 
-3. Run tests:
-```bash
-npm test
-```
+3. Configure authentication:
+   - Enable Email/Password sign-up in Authentication settings
+   - Set up password policies as needed
 
-## Production Deployment
+4. Set up Row-Level Security (RLS) policies for tables
 
-### Option 1: Vercel (Recommended)
-1. Push your code to GitHub
-2. Connect your repository to Vercel
-3. Configure environment variables in Vercel
-4. Deploy:
-```bash
-vercel --prod
-```
+### 2. Frontend Deployment with Vercel
 
-### Option 2: Manual Deployment
-1. Build the application:
-```bash
-npm run build
-```
+1. Connect your GitHub repository to Vercel
+2. Configure the build settings:
+   - Build Command: `npm run build`
+   - Output Directory: `.next`
+   - Install Command: `npm install`
 
-2. Start the production server:
-```bash
-npm start
-```
+3. Set environment variables:
+   - Add all required environment variables in the Vercel project settings
 
-## Post-Deployment Checklist
-1. Verify environment variables are set correctly
-2. Check database connections
-3. Test authentication flows
-4. Verify chart rendering
-5. Check responsive design
-6. Monitor error logs
-7. Test all main features
+4. Deploy the application:
+   - Trigger a deployment manually or let Vercel deploy automatically from your main branch
 
-## Monitoring
-- Set up Vercel Analytics
-- Configure error tracking
-- Monitor database performance
-- Set up uptime monitoring
+5. Configure custom domains if needed
 
-## Backup and Recovery
-1. Regular database backups
-2. Environment variable backups
-3. Code repository backups
-4. Recovery procedures documented
+### 3. Post-Deployment Verification
 
-## Security Considerations
-1. Enable HTTPS
-2. Configure CORS policies
-3. Set up rate limiting
-4. Enable security headers
-5. Regular security audits
+1. Test authentication:
+   - Create a test account
+   - Verify login functionality
 
-## Performance Optimization
-1. Enable caching
-2. Configure CDN
-3. Optimize images
-4. Monitor Core Web Vitals
+2. Test CRUD operations:
+   - Create, read, update, and delete resources
+   - Verify permissions are working correctly
 
-## Troubleshooting
-Common issues and solutions:
-1. Database connection issues
-2. Chart rendering problems
-3. Authentication failures
-4. Performance issues
-5. Build failures
+3. Test SMS functionality (if enabled):
+   - Send a test message
+   - Verify delivery status tracking
 
-## Rollback Procedures
-1. Keep previous deployments
-2. Document rollback steps
-3. Maintain backup points
-4. Test rollback procedures
+## Handling Client-Side Rendering Issues
 
-## Maintenance
-1. Regular dependency updates
-2. Security patches
-3. Performance monitoring
-4. Database maintenance
-5. Log rotation 
+The application uses Next.js with both server and client components. Some components that use authentication or browser APIs need to be rendered on the client side only. To avoid hydration errors:
+
+1. Use the `ClientOnly` component for pages and components that:
+   - Access browser APIs
+   - Require authentication
+   - Use React context providers
+
+2. For pages that use authentication context:
+   ```jsx
+   import ClientOnly from '@/components/client-only';
+   
+   export default function ProtectedPage() {
+     return (
+       <ClientOnly>
+         <YourAuthProtectedComponent />
+       </ClientOnly>
+     );
+   }
+   ```
+
+## Troubleshooting Common Deployment Issues
+
+### Authentication Issues
+- Verify Supabase URL and anon key are correct
+- Check browser console for authentication errors
+- Ensure RLS policies are set correctly
+
+### API Errors
+- Verify environment variables are set correctly
+- Check if Supabase is accessible from the deployment environment
+- Look for CORS issues in browser console
+
+### SMS Functionality Issues
+- Confirm Twilio credentials are correct
+- Check if `NEXT_PUBLIC_SMS_ENABLED` is set to `true`
+- Verify the phone number format in Twilio
+
+### Build Errors
+- Check for type errors in TypeScript files
+- Make sure all dependencies are properly installed
+- Review build logs for specific errors
+
+## Monitoring and Maintenance
+
+1. Set up logging and monitoring:
+   - Configure Vercel Analytics
+   - Set up error tracking with Sentry or similar service
+
+2. Regular maintenance:
+   - Update dependencies periodically
+   - Apply security patches
+   - Back up Supabase database regularly
+
+3. Performance monitoring:
+   - Monitor page load times
+   - Check database query performance
+   - Optimize as necessary
+
+## Rolling Back Deployments
+
+If issues are found in a production deployment:
+
+1. On Vercel:
+   - Go to the Deployments tab
+   - Find the last working deployment
+   - Click on the three dots and select "Promote to Production"
+
+2. For database issues:
+   - Restore from the latest backup in Supabase
+   - Or run corrective SQL scripts to fix specific issues
+
+## Continuous Integration/Continuous Deployment (CI/CD)
+
+For automated deployments:
+
+1. Set up GitHub Actions or Vercel GitHub integration
+2. Configure preview deployments for pull requests
+3. Add tests to the CI pipeline to catch issues before deployment
+
+---
+
+**Note**: Always test in a staging environment before deploying to production. This reduces the risk of introducing breaking changes to the live application. 
