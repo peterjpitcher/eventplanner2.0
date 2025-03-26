@@ -188,11 +188,6 @@ TWILIO_PHONE_NUMBER=your_twilio_phone_number
    - ✅ Create UI to display reminder statuses
    - ✅ Prevent sending duplicate reminders (with warning)
 
-3. **Bulk Operations**
-   - Create interface for sending reminders to multiple bookings
-   - Add filtering by event, date range
-   - Implement batch processing with status updates
-
 ### Files Modified/Created
 
 - ✅ `src/components/bookings/booking-detail.tsx` - Updated booking detail page
