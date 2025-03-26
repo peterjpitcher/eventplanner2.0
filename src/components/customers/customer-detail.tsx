@@ -3,7 +3,7 @@
 import React from 'react';
 import { Customer } from '@/types';
 import Link from 'next/link';
-import { formatUKMobileNumber } from '@/utils/customer-service';
+import { customerService } from '@/services/customer-service';
 import { CustomerMessages } from './customer-messages';
 
 interface CustomerDetailProps {
@@ -40,7 +40,7 @@ export function CustomerDetail({ customer }: CustomerDetailProps) {
               <dt className="text-sm font-medium text-gray-500">Mobile number</dt>
               <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
                 <a href={`tel:${customer.mobile_number}`} className="text-blue-600 hover:underline">
-                  {customer.mobile_number}
+                  {customer.mobile_number ? customerService.formatUKMobileNumber(customer.mobile_number) : 'N/A'}
                 </a>
               </dd>
             </div>

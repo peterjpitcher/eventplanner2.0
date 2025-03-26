@@ -1,10 +1,10 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Customer } from '@/types';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { deleteCustomer } from '@/utils/customer-service';
+import { customerService } from '@/services/customer-service';
 
 interface CustomerListProps {
   customers: Customer[];
@@ -13,27 +13,29 @@ interface CustomerListProps {
 
 export function CustomerList({ customers, onCustomerDeleted }: CustomerListProps) {
   const router = useRouter();
-  const [isDeleting, setIsDeleting] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Function to handle customer deletion
   const handleDelete = async (id: string) => {
     if (confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
       setIsDeleting(id);
+      setDeleteError(null);
+      
       try {
-        const { error } = await deleteCustomer(id);
+        const { error } = await customerService.deleteCustomer(id);
         
         if (error) {
-          alert(`Error deleting customer: ${error.message}`);
-          return;
+          throw error;
         }
         
         // Notify parent component about the deletion
         if (onCustomerDeleted) {
           onCustomerDeleted();
         }
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error deleting customer:', error);
-        alert('An error occurred while deleting the customer.');
+        setDeleteError(`Failed to delete customer: ${error.message || 'Unknown error'}`);
       } finally {
         setIsDeleting(null);
       }
@@ -85,6 +87,22 @@ export function CustomerList({ customers, onCustomerDeleted }: CustomerListProps
 
   return (
     <div className="overflow-x-auto">
+      {deleteError && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 mb-4 rounded relative" role="alert">
+          <strong className="font-bold">Error:</strong>
+          <span className="block sm:inline"> {deleteError}</span>
+          <button 
+            className="absolute top-0 bottom-0 right-0 px-4 py-3"
+            onClick={() => setDeleteError(null)}
+          >
+            <svg className="fill-current h-6 w-6 text-red-500" role="button" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <title>Close</title>
+              <path d="M14.348 14.849a1.2 1.2 0 0 1-1.697 0L10 11.819l-2.651 3.029a1.2 1.2 0 1 1-1.697-1.697l2.758-3.15-2.759-3.152a1.2 1.2 0 1 1 1.697-1.697L10 8.183l2.651-3.031a1.2 1.2 0 1 1 1.697 1.697l-2.758 3.152 2.758 3.15a1.2 1.2 0 0 1 0 1.698z"/>
+            </svg>
+          </button>
+        </div>
+      )}
+      
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
@@ -133,7 +151,7 @@ export function CustomerList({ customers, onCustomerDeleted }: CustomerListProps
                   <button
                     onClick={() => handleDelete(customer.id)}
                     disabled={isDeleting === customer.id}
-                    className="text-red-600 hover:text-red-900"
+                    className={`text-red-600 hover:text-red-900 ${isDeleting === customer.id ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     {isDeleting === customer.id ? 'Deleting...' : 'Delete'}
                   </button>

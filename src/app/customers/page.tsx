@@ -5,7 +5,7 @@ import { Customer } from '@/types';
 import { CustomerList } from '@/components/customers/customer-list';
 import { CustomerSearch } from '@/components/customers/customer-search';
 import { CustomerImport } from '@/components/customers/customer-import';
-import { getCustomers, searchCustomers } from '@/utils/customer-service';
+import { customerService } from '@/services/customer-service';
 import { PlusIcon, ArrowDownTrayIcon } from '@heroicons/react/24/outline';
 import Link from 'next/link';
 import { AppLayout } from '@/components/layout/app-layout';
@@ -27,19 +27,19 @@ export default function CustomersPage() {
         let response;
         
         if (searchQuery) {
-          response = await searchCustomers(searchQuery);
+          response = await customerService.searchCustomers(searchQuery);
         } else {
-          response = await getCustomers();
+          response = await customerService.getCustomers();
         }
 
         if (response.error) {
-          throw new Error(response.error.message);
+          throw response.error;
         }
 
         setCustomers(response.data || []);
-      } catch (err) {
+      } catch (err: any) {
         console.error('Error loading customers:', err);
-        setError('Failed to load customers. Please try again.');
+        setError(`Failed to load customers: ${err.message || 'Unknown error'}`);
       } finally {
         setIsLoading(false);
       }
@@ -65,19 +65,23 @@ export default function CustomersPage() {
   };
 
   // Refresh customer list
-  const refreshCustomers = () => {
-    if (searchQuery) {
-      searchCustomers(searchQuery).then((response) => {
-        if (!response.error) {
-          setCustomers(response.data || []);
-        }
-      });
-    } else {
-      getCustomers().then((response) => {
-        if (!response.error) {
-          setCustomers(response.data || []);
-        }
-      });
+  const refreshCustomers = async () => {
+    try {
+      let response;
+      if (searchQuery) {
+        response = await customerService.searchCustomers(searchQuery);
+      } else {
+        response = await customerService.getCustomers();
+      }
+      
+      if (response.error) {
+        throw response.error;
+      }
+      
+      setCustomers(response.data || []);
+    } catch (err: any) {
+      console.error('Error refreshing customers:', err);
+      setError(`Failed to refresh customers: ${err.message || 'Unknown error'}`);
     }
   };
 

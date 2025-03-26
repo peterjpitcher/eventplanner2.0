@@ -158,4 +158,85 @@ See [issues.md](../issues.md) for a list of current issues and planned enhanceme
 1. Create a feature branch from `main`
 2. Implement changes with appropriate tests
 3. Submit a pull request with detailed description
-4. Ensure CI checks pass before merging 
+4. Ensure CI checks pass before merging
+
+## Architecture
+
+### Customer Management
+
+The customer management system was refactored to use a unified service implementation:
+
+1. **Customer Service**
+   - Centralized in `src/services/customer-service.ts`
+   - Provides functions for:
+     - `getCustomers`: Retrieve all customers
+     - `getCustomerById`: Get a specific customer by ID
+     - `createCustomer`: Add a new customer
+     - `updateCustomer`: Modify an existing customer
+     - `deleteCustomer`: Remove a customer
+     - `searchCustomers`: Find customers by name or mobile number
+     - `formatUKMobileNumber`: Format UK mobile numbers consistently
+     - `isValidUKMobileNumber`: Validate UK mobile number formats
+
+2. **Mobile Number Formatting**
+   - Standardized UK mobile number formatting is applied consistently across the application
+   - Mobile numbers are formatted when creating and updating customers
+   - Validation is performed on form submission
+   - The service handles multiple UK mobile formats:
+     - Standard: 07XXX XXXXXX
+     - International with +: +447XXX XXXXXX
+     - International without +: 447XXX XXXXXX
+
+3. **Error Handling**
+   - Improved error handling throughout customer management functions
+   - Errors are properly logged and presented to users with friendly messages
+   - Delete operations show confirmation and handle errors gracefully
+
+## Component Updates
+
+The following components were updated to use the unified customer service:
+
+1. **Customer List**
+   - Uses `customerService.deleteCustomer` for customer deletion
+   - Implements improved error handling and loading states
+
+2. **Customer Form**
+   - Uses `customerService.isValidUKMobileNumber` for validation
+   - Provides clear error messages for invalid mobile number formats
+
+3. **Customer Detail**
+   - Uses `customerService.formatUKMobileNumber` for consistent display
+   - Properly handles missing or invalid mobile numbers
+
+4. **Customer Pages**
+   - All customer-related pages now use the unified customer service
+   - This includes Create, Read, Update, Delete operations
+
+## Technical Implementation
+
+The technical implementation involved:
+
+1. Migrating all customer service functionality to a single file:
+   - Moved from `src/utils/customer-service.ts` to `src/services/customer-service.ts`
+
+2. Updating all imports across the application to reference the new service location:
+   - Components now import `customerService` from `@/services/customer-service`
+   - Direct function imports like `isValidUKMobileNumber` are now accessed via the service object
+
+3. Enhancing error handling in all service methods:
+   - Consistent error format using the `ApiResponse` type
+   - Better error messages for end users
+
+4. Improving mobile number formatting and validation:
+   - Consistent UK mobile number formats throughout the application
+   - Proper validation before saving to the database
+
+## Future Enhancements
+
+Potential future enhancements for the customer management system:
+
+1. Add pagination support for large customer lists
+2. Implement more advanced search functionality
+3. Add bulk customer operations (import/export)
+4. Implement customer grouping or tagging
+5. Add activity history for customer interactions 

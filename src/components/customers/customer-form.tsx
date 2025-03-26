@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { Customer, CustomerFormData } from '@/types';
 import { useRouter } from 'next/navigation';
-import { isValidUKMobileNumber } from '@/utils/customer-service';
+import { customerService } from '@/services/customer-service';
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -45,7 +45,7 @@ export function CustomerForm({ customer, onSubmit, isSubmitting }: CustomerFormP
     
     if (!formData.mobile_number.trim()) {
       newErrors.mobile_number = 'Mobile number is required';
-    } else if (!isValidUKMobileNumber(formData.mobile_number)) {
+    } else if (!customerService.isValidUKMobileNumber(formData.mobile_number)) {
       newErrors.mobile_number = 'Please enter a valid UK mobile number (e.g., 07123456789 or +447123456789)';
     }
     

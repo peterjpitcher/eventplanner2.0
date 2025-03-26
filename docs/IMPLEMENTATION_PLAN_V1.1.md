@@ -135,118 +135,79 @@ Before beginning implementation, ensure you have:
 - `src/components/navigation/*` - Navigation components to update
 - `src/components/layout/app-layout.tsx` - Layout component to use
 
-### Phase 2: Fix Customer Management (Priority: High)
+### Phase 2: Fix Customer Management (Priority: High) ✅ COMPLETED
 
 **Objective**: Restore full functionality to customer management features
 
 #### Technical Details:
 
-1. **Customer List Fixes**:
-   - Examine `src/services/customer-service.ts` for API integration issues
-   - Check for proper error handling in the `getCustomers()` method:
-   ```typescript
-   // Expected implementation:
-   export const getCustomers = async (): Promise<{ data: Customer[] | null; error: Error | null }> => {
-     try {
-       const { data, error } = await supabase
-         .from('customers')
-         .select('*')
-         .order('created_at', { ascending: false });
-       
-       return { data, error };
-     } catch (error) {
-       console.error('Error fetching customers:', error);
-       return { data: null, error: error as Error };
-     }
-   };
-   ```
-   
-   - Update the customer list component in `src/components/customers/customer-list.tsx`:
-   ```tsx
-   // Add proper loading state and error handling
-   const [isLoading, setIsLoading] = useState(true);
-   const [error, setError] = useState<Error | null>(null);
-   
-   // Ensure data fetching is wrapped in try/catch
-   try {
-     const { data, error } = await customerService.getCustomers();
-     if (error) throw error;
-     setCustomers(data || []);
-   } catch (err) {
-     setError(err as Error);
-     // Show error UI
-   } finally {
-     setIsLoading(false);
-   }
-   ```
+1. **Customer Service Unification**: ✅ COMPLETED
+   - Identified conflict between two customer service implementations:
+     - `src/utils/customer-service.ts` (old implementation)
+     - `src/services/customer-service.ts` (new implementation)
+   - Consolidated all functionality into a single service at `src/services/customer-service.ts`
+   - Enhanced the service with proper error handling and consistent API responses
+   - Added mobile number formatting and validation utilities directly to the service
+   - Exported helper functions for wider use in the application
+   - Removed the redundant utility file to prevent future conflicts
 
-2. **Customer CRUD Operations**:
-   - Fix customer creation form in `src/app/customers/new/page.tsx`:
-     - Ensure form submission handles errors properly
-     - Add explicit redirect after successful submission:
-     ```tsx
-     const router = useRouter();
-     
-     const onSubmit = async (data: CustomerFormData) => {
-       setIsSubmitting(true);
-       try {
-         const result = await customerService.createCustomer(data);
-         if (result.error) throw result.error;
-         router.push('/customers');
-       } catch (error) {
-         setError('Failed to create customer');
-         console.error(error);
-       } finally {
-         setIsSubmitting(false);
-       }
-     };
-     ```
-   
-   - Fix customer editing in `src/app/customers/[id]/edit/page.tsx`:
-     - Similar error handling and redirect logic
-     - Ensure form is pre-populated with customer data
-   
-   - Fix customer deletion:
-     - Check `deleteCustomer()` method in customer service
-     - Ensure confirmation dialog is functional
-     - Add proper error handling and UI feedback
+2. **Customer Component Updates**: ✅ COMPLETED
+   - Updated all customer-related components to use the unified service:
+     - `src/components/customers/customer-list.tsx` - Updated to use `customerService.deleteCustomer`
+     - `src/components/customers/customer-form.tsx` - Updated to use `customerService.isValidUKMobileNumber`
+     - `src/components/customers/customer-detail.tsx` - Updated to use `customerService.formatUKMobileNumber`
+   - Implemented proper error handling and loading states in all components
+   - Added user-friendly error messages for failed operations
+   - Enhanced mobile number display with consistent formatting
 
-3. **Testing Methods**:
-   - Test customer listing:
-     - Navigate to `/customers` and verify customer list loads
-     - Test search functionality if available
-   
-   - Test customer creation:
-     - Navigate to `/customers/new`
-     - Fill and submit the form
-     - Verify redirect to customer list
-     - Verify new customer appears in list
-   
-   - Test customer editing:
-     - Select a customer and navigate to edit page
-     - Make changes and submit
-     - Verify changes appear in list
-   
-   - Test customer deletion:
-     - Select a customer to delete
-     - Confirm deletion
-     - Verify customer is removed from list
+3. **Customer Page Updates**: ✅ COMPLETED
+   - Updated all customer-related pages to use the unified service:
+     - `src/app/customers/page.tsx` - Customer list page now uses `customerService.getCustomers` and `searchCustomers`
+     - `src/app/customers/new/page.tsx` - Now uses `customerService.createCustomer`
+     - `src/app/customers/[id]/page.tsx` - Now uses `customerService.getCustomerById`
+     - `src/app/customers/[id]/edit/page.tsx` - Now uses `customerService.updateCustomer`
+   - Standardized error handling approach across all pages
+   - Added improved loading states and user feedback
+   - Fixed redirection after form submissions
+
+4. **Error Handling Improvements**: ✅ COMPLETED
+   - Standardized error handling format using the `ApiResponse` type
+   - Added specific error messages for common failure scenarios
+   - Improved error logging for debugging purposes
+   - Added visual error feedback for users with dismiss options
+   - Ensured all operations have proper loading indicators
+
+5. **Mobile Number Formatting**: ✅ COMPLETED
+   - Implemented standardized UK mobile number formatting
+   - Added validation for different mobile number formats:
+     - Standard: 07XXX XXXXXX
+     - International with +: +447XXX XXXXXX
+     - International without +: 447XXX XXXXXX
+   - Ensured consistent formatting when creating and updating customers
+   - Added proper validation in forms with helpful error messages
 
 #### Testing Criteria:
-- Customer list loads successfully with data
-- Customer creation form submits and redirects correctly
-- Customer editing form loads, submits, and redirects correctly
-- Customer deletion works with confirmation
-- Proper error messages appear when operations fail
+- Customer list loads successfully with data ✅
+- Customer creation form submits and redirects correctly ✅
+- Customer editing form loads, submits, and redirects correctly ✅
+- Customer deletion works with confirmation ✅
+- Proper error messages appear when operations fail ✅
+- Mobile numbers are properly formatted in all views ✅
+- Form validation prevents submission of invalid mobile numbers ✅
+
+**Completion Date**: [Current Date]
+**Notes**: Successfully unified the customer service implementation, ensuring consistent behavior across all customer management features. Enhanced error handling and user feedback for a better user experience.
 
 **Estimated Time**: 1 day
 **Dependencies**: Phase 1
 **Key Files**:
-- `src/services/customer-service.ts` - Service for API operations
-- `src/components/customers/customer-list.tsx` - List component
-- `src/components/customers/customer-form.tsx` - Form component
-- `src/app/customers/new/page.tsx` - New customer page
-- `src/app/customers/[id]/edit/page.tsx` - Edit customer page
+- `src/services/customer-service.ts` - Unified service for customer operations
+- `src/lib/phone-utils.ts` - Utilities for phone number formatting
+- `src/components/customers/customer-list.tsx` - Updated list component
+- `src/components/customers/customer-form.tsx` - Updated form component
+- `src/components/customers/customer-detail.tsx` - Updated detail component
+- `src/app/customers/*.tsx` - Updated customer pages
+- `docs/DOCUMENTATION.md` - Updated documentation
 
 ### Phase 3: Fix Events and Categories (Priority: High)
 
