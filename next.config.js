@@ -3,7 +3,17 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  // Server Actions are enabled by default in Next.js 14, no need for flag
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      config.resolve.fallback = {
+        fs: false,
+        net: false,
+        tls: false,
+        crypto: false
+      };
+    }
+    return config;
+  }
 };
 
 module.exports = nextConfig; 

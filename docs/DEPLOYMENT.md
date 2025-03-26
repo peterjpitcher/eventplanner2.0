@@ -9,8 +9,8 @@
 ## Environment Setup
 1. Create a `.env.local` file in the project root with the following variables:
 ```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_URL=https://hxbbcbjunrovtkpcheul.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh4YmJjYmp1bnJvdnRrcGNoZXVsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDI5MTkwMTksImV4cCI6MjA1ODQ5NTAxOX0.UJJ6xTLr9C1zLOS6bNYHrsUPsq6eA9NTKKXiyVLhmTk
 ```
 
 ## Database Setup

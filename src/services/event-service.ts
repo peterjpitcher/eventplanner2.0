@@ -10,7 +10,11 @@ export interface Event {
   category_id: string | null;
   date: string;
   start_time: string;
+  end_time: string | null;
+  duration: number | null;
+  price: number | null;
   capacity: number | null;
+  location: string | null;
   is_published: boolean;
   is_canceled: boolean;
   created_at: string;
@@ -25,7 +29,11 @@ export interface EventFormData {
   category_id: string | null;
   date: string;
   start_time: string;
+  end_time: string | null;
+  duration: number | null;
+  price: number | null;
   capacity: number | null;
+  location: string | null;
   is_published: boolean;
 }
 

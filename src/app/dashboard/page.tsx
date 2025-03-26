@@ -10,11 +10,6 @@ import { EventChart } from '@/components/dashboard/event-chart';
 import { getDashboardStats, getCategoryBookingData, getMonthlyBookingData, getRecentActivity } from '@/utils/dashboard-service';
 import { generateChartColors } from '@/components/dashboard/event-chart';
 
-export const metadata = {
-  title: 'Dashboard | Event Planner',
-  description: 'Event Planner Dashboard',
-};
-
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<any>(null);

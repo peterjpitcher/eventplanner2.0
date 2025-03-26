@@ -1,170 +1,152 @@
-import React from 'react';
+'use client';
+
+import React, { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { PageHeader } from '@/components/ui/page-header';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { eventService } from '@/services/event-service';
-import { formatDateTime, formatDuration } from '@/lib/date-utils';
-import { BookingListWrapper } from './booking-list-wrapper';
-import { QuickBookWrapper } from './quick-book-wrapper';
+import { Event } from '@/types/event';
+import { supabase } from '@/lib/supabase';
 
-export async function generateMetadata({ params }: { params: { id: string } }) {
-  const { data: event } = await eventService.getEventById(params.id);
-  
+export default function EventPage() {
+  const { id } = useParams();
+  const [event, setEvent] = useState<Event | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadEvent = useCallback(async () => {
+    try {
+      setLoading(true);
+      const { data: event, error } = await supabase
+        .from('events')
+        .select(`
+          *,
+          category:categories (
+            id,
+            name
+          )
+        `)
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+      setEvent(event);
+    } catch (error) {
+      console.error('Error loading event:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    loadEvent();
+  }, [loadEvent]);
+
+  if (loading) {
+    return (
+      <div className="container py-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/4 mb-4"></div>
+          <div className="h-4 bg-gray-200 rounded w-1/2 mb-8"></div>
+          <div className="space-y-6">
+            {[...Array(4)].map((_, i) => (
+              <div key={i}>
+                <div className="h-6 bg-gray-200 rounded w-1/6 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-full"></div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!event) {
-    return {
-      title: 'Event Not Found | Event Planner',
-      description: 'The requested event could not be found',
-    };
+    return (
+      <div className="container py-6">
+        <PageHeader
+          title="Event Not Found"
+          description="The event you're looking for doesn't exist."
+        />
+        <Link href="/events" passHref>
+          <Button>Back to Events</Button>
+        </Link>
+      </div>
+    );
   }
-  
-  return {
-    title: `${event.title} | Event Planner`,
-    description: event.description || 'Event details',
-  };
-}
 
-export default async function EventDetailsPage({ params }: { params: { id: string } }) {
-  const { data: event, error } = await eventService.getEventById(params.id);
-  
-  if (error || !event) {
-    console.error('Error loading event:', error);
-    notFound();
-  }
-  
   return (
     <div className="container py-6">
       <div className="flex justify-between items-start mb-6">
         <PageHeader
-          title={event.title}
-          description={event.is_published ? 'Published event' : 'Draft event'}
+          title={event.name}
+          description={`Event details for ${event.name}`}
         />
-        <div className="flex space-x-2">
-          <Link href={`/events/${event.id}/edit`} passHref>
-            <Button variant="outline">Edit Event</Button>
-          </Link>
+        <div className="flex gap-4">
           {!event.is_canceled && (
             <Link href={`/events/${event.id}/edit?action=cancel`} passHref>
               <Button variant="danger">Cancel Event</Button>
             </Link>
           )}
           <Link href="/events" passHref>
-            <Button variant="secondary">Back to Events</Button>
+            <Button variant="outline">Back to Events</Button>
+          </Link>
+          <Link href={`/events/${event.id}/edit`} passHref>
+            <Button>Edit Event</Button>
           </Link>
         </div>
       </div>
 
-      <div className="bg-white shadow rounded-lg overflow-hidden">
+      <div className="bg-white shadow rounded-lg">
         <div className="p-6">
-          <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-6">
-            {/* Left column - Event details */}
-            <div className="flex-1 space-y-6">
-              {/* Status badges */}
-              <div className="flex flex-wrap gap-2">
-                {event.is_canceled && (
-                  <Badge variant="error">Canceled</Badge>
-                )}
-                {event.is_published ? (
-                  <Badge variant="success">Published</Badge>
-                ) : (
-                  <Badge variant="warning">Draft</Badge>
-                )}
-                {event.category && (
-                  <Badge
-                    variant="default" 
-                    className="flex items-center"
-                  >
-                    <span 
-                      className="w-2 h-2 rounded-full mr-1" 
-                      style={{ backgroundColor: event.category.color }}
-                    />
-                    {event.category.name}
-                  </Badge>
-                )}
-              </div>
-              
-              {/* Description */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Description</h3>
-                <div className="prose max-w-none">
-                  {event.description ? (
-                    <p className="text-gray-700 whitespace-pre-line">{event.description}</p>
-                  ) : (
-                    <p className="text-gray-500 italic">No description provided</p>
-                  )}
-                </div>
-              </div>
-              
-              {/* Location */}
-              {event.location && (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Basic Info */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Basic Information</h3>
+              <dl className="space-y-2">
                 <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-2">Location</h3>
-                  <p className="text-gray-700">{event.location}</p>
+                  <dt className="text-sm font-medium text-gray-500">Category</dt>
+                  <dd className="text-gray-900">{event.category?.name}</dd>
                 </div>
-              )}
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Date</dt>
+                  <dd className="text-gray-900">{event.date}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Time</dt>
+                  <dd className="text-gray-900">{event.time}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Capacity</dt>
+                  <dd className="text-gray-900">{event.capacity} people</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Price</dt>
+                  <dd className="text-gray-900">£{event.price}</dd>
+                </div>
+                <div>
+                  <dt className="text-sm font-medium text-gray-500">Status</dt>
+                  <dd className={`text-${event.is_canceled ? 'red' : 'green'}-600`}>
+                    {event.is_canceled ? 'Cancelled' : 'Active'}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+
+            {/* Description */}
+            <div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Description</h3>
+              <p className="text-gray-700">{event.description}</p>
             </div>
             
-            {/* Right column - Event metadata */}
-            <div className="md:w-72 bg-gray-50 p-4 rounded-lg space-y-4">
-              {/* Date and time */}
+            {/* Location */}
+            {event.location && (
               <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Date & Time</h3>
-                <p className="text-gray-900 font-medium">
-                  {formatDateTime(event.date, event.start_time)}
-                </p>
-                {event.end_time && (
-                  <p className="text-gray-500 text-sm">
-                    Ends at {formatDateTime(event.date, event.end_time)}
-                  </p>
-                )}
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Location</h3>
+                <p className="text-gray-700">{event.location}</p>
               </div>
-              
-              {/* Duration */}
-              {event.duration && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Duration</h3>
-                  <p className="text-gray-900">{formatDuration(event.duration)}</p>
-                </div>
-              )}
-              
-              {/* Price */}
-              <div>
-                <h3 className="text-sm font-medium text-gray-500 mb-1">Price</h3>
-                <p className="text-gray-900">
-                  {event.price ? `£${event.price.toFixed(2)}` : 'Free'}
-                </p>
-              </div>
-              
-              {/* Capacity */}
-              {event.capacity && (
-                <div>
-                  <h3 className="text-sm font-medium text-gray-500 mb-1">Capacity</h3>
-                  <p className="text-gray-900">{event.capacity} attendees</p>
-                </div>
-              )}
-              
-              {/* Created/Updated info */}
-              <div className="border-t border-gray-200 pt-4 mt-4">
-                <p className="text-gray-500 text-xs">
-                  Created: {new Date(event.created_at).toLocaleDateString('en-GB')}
-                </p>
-                <p className="text-gray-500 text-xs">
-                  Last updated: {new Date(event.updated_at).toLocaleDateString('en-GB')}
-                </p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
-      </div>
-
-      {/* Quick Book section */}
-      <QuickBookWrapper eventId={event.id} />
-
-      {/* Bookings section */}
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Bookings</h2>
-        <BookingListWrapper eventId={event.id} />
       </div>
     </div>
   );

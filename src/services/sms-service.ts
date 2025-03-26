@@ -10,6 +10,7 @@ export type SMSMessageType =
   'reminder_24hr' | 
   'booking_cancellation' | 
   'event_cancellation' | 
+  'manual' |
   'test';
 
 export type SMSStatus = 
@@ -17,7 +18,8 @@ export type SMSStatus =
   'sent' | 
   'delivered' | 
   'failed' | 
-  'undelivered';
+  'undelivered' |
+  'simulated';
 
 export interface SMSMessage {
   id: string;
