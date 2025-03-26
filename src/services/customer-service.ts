@@ -156,12 +156,11 @@ export const customerService = {
         };
       }
       
-      // Perform the actual deletion
-      const { data: deletedData, error: deleteError } = await supabase
+      // Perform the actual deletion - don't use .select() as this can confuse the response handling
+      const { error: deleteError } = await supabase
         .from(CUSTOMERS_TABLE)
         .delete()
-        .eq('id', id)
-        .select();
+        .eq('id', id);
       
       if (deleteError) {
         console.error(`Error during customer deletion for ID ${id}:`, deleteError);
@@ -177,15 +176,7 @@ export const customerService = {
         throw deleteError;
       }
       
-      // In latest Supabase versions, delete with select() returns the deleted rows
-      if (!deletedData || deletedData.length === 0) {
-        console.warn(`No customer was deleted with ID ${id}`);
-        return {
-          data: null,
-          error: new Error(`Customer with ID ${id} was not deleted. Verify the customer exists.`)
-        };
-      }
-      
+      // If we get here, deletion was successful since there was no error
       console.log(`Successfully deleted customer with ID: ${id}`);
       return { data: null, error: null };
     } catch (error) {

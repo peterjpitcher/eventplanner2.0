@@ -7,6 +7,9 @@ import { Alert } from '@/components/ui/alert';
 import { Spinner } from '@/components/ui/spinner';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import Link from 'next/link';
+import { Modal } from '@/components/ui/modal';
+import { smsService } from '@/services/sms-service';
 
 interface Template {
   id: string;
@@ -93,6 +96,17 @@ export default function SMSTemplatesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showTestModal, setShowTestModal] = useState(false);
+  const [testMessage, setTestMessage] = useState({
+    templateId: '',
+    phoneNumber: '',
+    customerName: 'John Smith',
+    eventName: 'Sample Event',
+    eventDate: '01/01/2023',
+    eventTime: '19:00',
+    seats: '2'
+  });
+  const [isSendingTest, setIsSendingTest] = useState(false);
 
   useEffect(() => {
     fetchTemplates();
@@ -186,6 +200,52 @@ export default function SMSTemplatesPage() {
     }
   };
 
+  const handleSendTestMessage = async () => {
+    if (!testMessage.templateId || !testMessage.phoneNumber) {
+      toast.error('Please select a template and enter a phone number');
+      return;
+    }
+
+    setIsSendingTest(true);
+
+    try {
+      // Get the template content
+      const template = templates.find(t => t.id === testMessage.templateId);
+      
+      if (!template) {
+        toast.error('Selected template not found');
+        return;
+      }
+      
+      // Process the template with test data
+      let content = template.content;
+      content = content.replace(/{customer_name}/g, testMessage.customerName);
+      content = content.replace(/{customer_first_name}/g, testMessage.customerName.split(' ')[0]);
+      content = content.replace(/{event_name}/g, testMessage.eventName);
+      content = content.replace(/{event_date}/g, testMessage.eventDate);
+      content = content.replace(/{event_time}/g, testMessage.eventTime);
+      content = content.replace(/{seats}/g, testMessage.seats);
+
+      // Send the test message
+      const result = await smsService.sendTestMessage({
+        phoneNumber: testMessage.phoneNumber,
+        messageContent: content
+      });
+      
+      if (result.success) {
+        toast.success('Test message sent successfully');
+        setShowTestModal(false);
+      } else {
+        toast.error(`Failed to send test message: ${result.error}`);
+      }
+    } catch (err: any) {
+      console.error('Error sending test message:', err);
+      toast.error(err.message || 'Failed to send test message');
+    } finally {
+      setIsSendingTest(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <AppLayout>
@@ -214,9 +274,17 @@ export default function SMSTemplatesPage() {
 
   return (
     <AppLayout>
-      <div className="py-6">
-        <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">SMS Templates</h1>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
+          <h1 className="text-2xl font-bold">SMS Templates</h1>
+          <div className="flex flex-wrap gap-2 mt-2 sm:mt-0">
+            <Button onClick={() => setShowTestModal(true)} variant="outline">
+              Test Message
+            </Button>
+            <Link href="/messages">
+              <Button>View Messages</Button>
+            </Link>
+          </div>
         </div>
         
         <div className="bg-white shadow rounded-lg overflow-hidden">
@@ -300,6 +368,103 @@ export default function SMSTemplatesPage() {
             </div>
           </div>
         </div>
+        
+        {/* Test Message Modal */}
+        <Modal
+          isOpen={showTestModal}
+          onClose={() => setShowTestModal(false)}
+          title="Send Test Message"
+        >
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-1">Template</label>
+              <select
+                className="w-full rounded-md border border-gray-300 p-2"
+                value={testMessage.templateId}
+                onChange={(e) => setTestMessage({...testMessage, templateId: e.target.value})}
+              >
+                <option value="">Select a template</option>
+                {templates.map(template => (
+                  <option key={template.id} value={template.id}>
+                    {template.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Phone Number</label>
+              <input
+                type="text"
+                className="w-full rounded-md border border-gray-300 p-2"
+                placeholder="Enter UK mobile number"
+                value={testMessage.phoneNumber}
+                onChange={(e) => setTestMessage({...testMessage, phoneNumber: e.target.value})}
+              />
+            </div>
+            <div>
+              <h3 className="text-sm font-medium mb-2">Test Data (Optional)</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs mb-1">Customer Name</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    value={testMessage.customerName}
+                    onChange={(e) => setTestMessage({...testMessage, customerName: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1">Event Name</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    value={testMessage.eventName}
+                    onChange={(e) => setTestMessage({...testMessage, eventName: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1">Event Date</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    value={testMessage.eventDate}
+                    onChange={(e) => setTestMessage({...testMessage, eventDate: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1">Event Time</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    value={testMessage.eventTime}
+                    onChange={(e) => setTestMessage({...testMessage, eventTime: e.target.value})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs mb-1">Seats</label>
+                  <input
+                    type="text"
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    value={testMessage.seats}
+                    onChange={(e) => setTestMessage({...testMessage, seats: e.target.value})}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 mt-4">
+              <Button variant="outline" onClick={() => setShowTestModal(false)}>
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleSendTestMessage} 
+                disabled={isSendingTest || !testMessage.templateId || !testMessage.phoneNumber}
+              >
+                {isSendingTest ? <Spinner className="mr-2 h-4 w-4" /> : null}
+                Send Test
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </AppLayout>
   );

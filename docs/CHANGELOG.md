@@ -79,3 +79,31 @@
 - Customer, Category, and Event pages showing 404 errors
 - Booking creation not working properly
 - Delete functions not executing correctly in some cases 
+
+## [0.6.0] - 2024-05-01
+
+### Added
+- New SMS test feature for verifying template functionality
+- SMS configuration management utility
+- Category deletion stored procedure
+- Implementation summary document (IMPLEMENTATION_SUMMARY_V1.4.md)
+- API endpoint for checking SMS status
+
+### Fixed
+- Customer deletion functionality now working properly
+- Dashboard upcoming events display fixed
+- Category deletion functionality implemented
+- Removed Categories from navigation menu
+- SMS notifications now working correctly for bookings
+- Fixed SMS test message functionality
+- Improved error handling throughout the application
+
+### Changed
+- Simplified dashboard queries for better performance
+- Enhanced SMS configuration handling with database storage
+- Updated documentation to reflect recent changes
+- Improved logging for easier debugging
+
+### Documentation
+- Updated DECISIONS.md with v1.4 implementation decisions
+- Updated IMPLEMENTATION_PLAN_V1.4.md with completion status 

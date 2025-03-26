@@ -6,6 +6,7 @@ import { customerService } from './customer-service';
 import { eventService } from './event-service';
 import { format } from 'date-fns';
 import { ApiResponse } from '@/types';
+import { checkAndEnsureSmsConfig } from '@/lib/sms-utils';
 
 export interface Booking {
   id: string;
@@ -243,6 +244,7 @@ export const bookingService = {
       
       // Store whether to send SMS, then remove from database object
       const shouldSendNotification = booking.send_notification !== false;
+      console.log('Should send notification:', shouldSendNotification);
       
       // Create database object without send_notification field
       const { send_notification, ...bookingData } = booking;
@@ -276,26 +278,45 @@ export const bookingService = {
       // Initialize SMS sent flag
       let smsSent = false;
 
+      // Check if SMS is enabled using the utility function
+      const { smsEnabled } = await checkAndEnsureSmsConfig();
+      
+      console.log('SMS enabled status:', smsEnabled);
+
       // If SMS is enabled and we should send notification, send a booking confirmation
-      if (process.env.SMS_ENABLED === 'true' && shouldSendNotification && bookingWithRelations) {
+      if (smsEnabled && shouldSendNotification) {
+        console.log('Attempting to send SMS notification');
         try {
           if (bookingWithRelations.customer && bookingWithRelations.event) {
+            console.log('Customer and event data available, sending SMS');
+            
             // Send SMS and wait for the result
             const smsResult = await this.sendConfirmationSMS(
               bookingWithRelations,
               bookingWithRelations.customer,
               bookingWithRelations.event
             );
+            
             smsSent = smsResult.success;
             
-            if (!smsResult.success) {
+            if (smsResult.success) {
+              console.log('Successfully sent booking confirmation SMS');
+            } else {
               console.error('Error sending booking confirmation SMS:', smsResult.error);
             }
+          } else {
+            console.error('Missing customer or event data for SMS', {
+              hasCustomer: !!bookingWithRelations.customer,
+              hasEvent: !!bookingWithRelations.event
+            });
           }
         } catch (smsError) {
           console.error('Error processing SMS for booking:', smsError);
           // Continue with booking creation even if SMS fails
         }
+      } else {
+        console.log('SMS notification skipped: SMS enabled =', smsEnabled, 
+                    'Should send notification =', shouldSendNotification);
       }
 
       return { data: bookingWithRelations, error: null, smsSent };

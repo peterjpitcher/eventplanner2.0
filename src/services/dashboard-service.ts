@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { ApiResponse } from '@/types';
-import { format, subMonths, startOfMonth, parseISO } from 'date-fns';
+import { format, subMonths, startOfMonth, parseISO, addDays } from 'date-fns';
 
 // Types for dashboard data
 export interface BookingStat {
@@ -61,39 +61,21 @@ export const dashboardService = {
         
         console.log('Current date for events query:', currentDate);
         
-        // Query events that start in the future
-        // First get events with date > today
-        const { data: futureEvents, error: futureEventsError } = await supabase
+        // Use a simpler approach with direct SQL query for upcoming events
+        const { data: upcomingEvents, error: eventsError } = await supabase
           .from('events')
           .select('*')
           .gte('date', currentDate)
+          .eq('is_canceled', false)
           .order('date', { ascending: true })
           .order('start_time', { ascending: true })
-          .limit(10);
+          .limit(5);
         
-        if (futureEventsError) {
-          console.error('Failed to fetch future events:', futureEventsError);
+        if (eventsError) {
+          console.error('Failed to fetch upcoming events:', eventsError);
           partialStats.upcomingEvents = [];
         } else {
-          // Filter events for today to only include those that haven't started yet
-          const upcomingEvents = futureEvents?.filter(event => {
-            if (event.date > currentDate) return true; // Future date, definitely upcoming
-            
-            if (event.date === currentDate) {
-              // Today's event - check if time is in the future
-              const eventTime = event.start_time.split(':').map(Number);
-              const currentTime = [now.getHours(), now.getMinutes()];
-              
-              // Compare hours and minutes
-              if (eventTime[0] > currentTime[0]) return true;
-              if (eventTime[0] === currentTime[0] && eventTime[1] > currentTime[1]) return true;
-              return false; // Today's event that already started
-            }
-            
-            return false; // Past date
-          }).slice(0, 5); // Take only first 5 upcoming events
-          
-          console.log(`Found ${upcomingEvents?.length} upcoming events`);
+          console.log(`Found ${upcomingEvents?.length || 0} upcoming events`);
           partialStats.upcomingEvents = upcomingEvents || [];
         }
       } catch (err) {

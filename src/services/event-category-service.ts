@@ -103,14 +103,17 @@ export const eventCategoryService = {
    */
   async deleteCategory(id: string): Promise<ApiResponse<null>> {
     try {
+      console.log(`Starting deletion process for category ${id}`);
+      
       // First check if the category exists
       const { data: existingCategory, error: checkError } = await supabase
         .from('event_categories')
-        .select('id')
+        .select('id, name')
         .eq('id', id)
         .single();
       
       if (checkError) {
+        console.error(`Error checking if category ${id} exists:`, checkError);
         if (checkError.code === 'PGRST116') { // Record not found
           return { 
             data: null, 
@@ -120,12 +123,13 @@ export const eventCategoryService = {
         throw checkError;
       }
       
+      console.log(`Found category ${existingCategory.name} (${id})`);
+      
       // Check for related events before deletion
       const { data: relatedEvents, error: eventsError } = await supabase
         .from('events')
-        .select('id')
-        .eq('category_id', id)
-        .limit(1);
+        .select('id, title')
+        .eq('category_id', id);
       
       if (eventsError) {
         console.error(`Error checking related events for category ${id}:`, eventsError);
@@ -133,43 +137,24 @@ export const eventCategoryService = {
       } 
       
       if (relatedEvents && relatedEvents.length > 0) {
-        console.warn(`Category ${id} has related events. Deletion will be rejected due to foreign key constraints.`);
+        console.warn(`Category ${id} has ${relatedEvents.length} related events. Deletion will be rejected.`);
+        console.warn(`Related events:`, relatedEvents.map(e => e.title).join(', '));
         return {
           data: null,
-          error: new Error('Cannot delete category with existing events. Please reassign or delete the events first.')
+          error: new Error(`Cannot delete category with ${relatedEvents.length} existing events. Please reassign or delete these events first.`)
         };
       }
       
-      // Perform the actual deletion with explicit return values
-      const { error: deleteError, count } = await supabase
-        .from('event_categories')
-        .delete()
-        .eq('id', id)
-        .select()
-        .then(res => ({
-          error: res.error,
-          count: res.data ? res.data.length : 0
-        }));
+      console.log(`No related events found, proceeding with deletion of category ${id}`);
+      
+      // Perform the actual deletion with a raw query to bypass any client-side issues
+      const { error: deleteError } = await supabase.rpc('delete_category', { category_id: id });
       
       if (deleteError) {
         console.error(`Error during category deletion for ID ${id}:`, deleteError);
-        
-        // Check for foreign key violation
-        if (deleteError.code === '23503') { // Foreign key violation
-          return { 
-            data: null, 
-            error: new Error('Cannot delete category with existing events. Remove events first.') 
-          };
-        }
-        
-        throw deleteError;
-      }
-      
-      if (count === 0) {
-        console.warn(`No category was deleted with ID ${id}`);
-        return {
-          data: null,
-          error: new Error(`Category with ID ${id} was not deleted. Verify the category exists.`)
+        return { 
+          data: null, 
+          error: new Error(`Failed to delete category: ${deleteError.message}`) 
         };
       }
       

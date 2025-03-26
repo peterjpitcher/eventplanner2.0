@@ -3,6 +3,7 @@
  */
 
 import { formatUKMobileNumber } from './phone-utils';
+import { supabase } from './supabase';
 
 // Twilio client types
 interface TwilioMessage {
@@ -147,4 +148,87 @@ export function processTemplate(template: string, variables: Record<string, stri
   });
 
   return processed;
+}
+
+/**
+ * Check if SMS is enabled in the system and create config row if it doesn't exist
+ */
+export async function checkAndEnsureSmsConfig(): Promise<{ smsEnabled: boolean; message: string }> {
+  try {
+    // Ensure environment variables are set
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const phoneNumber = process.env.TWILIO_PHONE_NUMBER;
+    
+    console.log('SMS check - ENV vars:', {
+      hasSid: !!accountSid,
+      hasToken: !!authToken,
+      hasPhone: !!phoneNumber,
+      smsEnabled: process.env.SMS_ENABLED
+    });
+    
+    // First check if the SMS_ENABLED app config exists
+    const { data: configData, error: configError } = await supabase
+      .from('app_config')
+      .select('*')
+      .eq('key', 'sms_enabled')
+      .single();
+    
+    if (configError && configError.code !== 'PGRST116') {
+      // If there's an error other than "not found"
+      console.error('Error fetching SMS config:', configError);
+      return { 
+        smsEnabled: process.env.SMS_ENABLED === 'true',
+        message: 'Error checking SMS configuration' 
+      };
+    }
+    
+    // If config doesn't exist, create it based on env var
+    if (!configData || configError?.code === 'PGRST116') {
+      console.log('Creating SMS config in database');
+      const isEnabled = !!(accountSid && authToken && phoneNumber && process.env.SMS_ENABLED === 'true');
+      
+      await supabase
+        .from('app_config')
+        .upsert({ 
+          key: 'sms_enabled',
+          value: isEnabled ? 'true' : 'false',
+          description: 'Whether SMS notifications are enabled'
+        });
+      
+      return { 
+        smsEnabled: isEnabled,
+        message: `SMS ${isEnabled ? 'enabled' : 'disabled'} and configuration created` 
+      };
+    }
+    
+    // Config exists, use it
+    const smsEnabled = configData.value === 'true';
+    
+    // Update config if env vars don't support SMS but config says it's enabled
+    if (smsEnabled && (!accountSid || !authToken || !phoneNumber || process.env.SMS_ENABLED !== 'true')) {
+      console.log('SMS environment variables missing, updating config to disabled');
+      
+      await supabase
+        .from('app_config')
+        .update({ value: 'false' })
+        .eq('key', 'sms_enabled');
+      
+      return { 
+        smsEnabled: false,
+        message: 'SMS disabled due to missing configuration' 
+      };
+    }
+    
+    return {
+      smsEnabled,
+      message: `SMS is ${smsEnabled ? 'enabled' : 'disabled'}`
+    };
+  } catch (error) {
+    console.error('Error in SMS config check:', error);
+    return {
+      smsEnabled: false,
+      message: 'Error checking SMS configuration'
+    };
+  }
 } 

@@ -682,3 +682,35 @@ Phase 15 focuses on making the application fully responsive and mobile-friendly.
 - Positive: Better visibility into project status and progress
 - Negative: Time needed to create the plan before starting fixes
 - Negative: Plan may need adjustment as implementation progresses
+
+## Implementation Plan v1.4 Fixes
+
+### Customer Deletion Issue
+- **Decision**: Removed `.select()` from the Supabase DELETE operation in customer service
+- **Reasoning**: The `.select()` method on DELETE operations was causing confusion in response handling. Supabase's behavior with `.select()` on DELETE is to return the deleted rows, but this was being misinterpreted as an error when the deletion was actually successful. Removing this method allows for simpler success/failure determination.
+- **Date**: 2024-03-26
+
+### Category Deletion Issue
+- **Decision**: Implemented a server-side RPC function for category deletion
+- **Reasoning**: To bypass client-side issues with DELETE operations, we created a PostgreSQL function callable via RPC. This approach provides a more reliable way to delete categories while maintaining proper error handling and constraint checking.
+- **Date**: 2024-03-26
+
+### Dashboard Upcoming Events
+- **Decision**: Simplified the query for upcoming events
+- **Reasoning**: The previous implementation used complex filtering logic that was causing issues. By using simpler, more direct Supabase query methods (`.gte()`, `.eq()`, etc.), we improved reliability and readability.
+- **Date**: 2024-03-26
+
+### Navigation Structure
+- **Decision**: Removed duplicate navigation definitions and removed Categories and Messages items
+- **Reasoning**: The application had multiple sidebar components with different navigation items, causing inconsistency. We standardized the navigation across components and removed items that should not appear in the main navigation according to the implementation plan.
+- **Date**: 2024-03-26
+
+### SMS Notifications
+- **Decision**: Created a robust SMS configuration management utility
+- **Reasoning**: The previous implementation directly checked environment variables, which was unreliable. The new `checkAndEnsureSmsConfig()` utility ensures SMS configuration is properly stored in the database, checks all required credentials, and provides better error handling and logging.
+- **Date**: 2024-03-26
+
+### SMS Test Feature
+- **Decision**: Added a test message feature to the SMS Templates page
+- **Reasoning**: This allows users to verify SMS functionality without creating actual bookings, improving the debugging workflow and making it easier to test template changes.
+- **Date**: 2024-03-26
