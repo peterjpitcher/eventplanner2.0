@@ -98,6 +98,7 @@ export function BookingEdit({ bookingId, eventId }: BookingEditProps) {
             eventId={eventId}
             onSubmit={handleSubmit}
             isSubmitting={isSubmitting}
+            error={error}
           />
         </div>
       </div>

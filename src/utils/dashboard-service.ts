@@ -321,12 +321,23 @@ export async function getRecentActivity(): Promise<ActivityItem[]> {
     }
 
     // Combine and sort activities
-    const bookingActivities: ActivityItem[] = (bookings || []).map((booking: SupabaseBooking) => ({
-      id: booking.id,
-      type: 'booking',
-      content: `${booking.customer?.[0]?.first_name || ''} ${booking.customer?.[0]?.last_name || ''} booked ${booking.event?.[0]?.title || 'an event'}`,
-      timestamp: booking.created_at
-    }));
+    const bookingActivities: ActivityItem[] = (bookings || []).map((booking) => {
+      // Ensure booking has the required structure
+      const typedBooking: SupabaseBooking = {
+        id: booking.id,
+        created_at: booking.created_at,
+        event_id: booking.event?.[0]?.id || '',
+        event: booking.event,
+        customer: booking.customer
+      };
+      
+      return {
+        id: typedBooking.id,
+        type: 'booking',
+        content: `${typedBooking.customer?.[0]?.first_name || ''} ${typedBooking.customer?.[0]?.last_name || ''} booked ${typedBooking.event?.[0]?.title || 'an event'}`,
+        timestamp: typedBooking.created_at
+      };
+    });
 
     const messageActivities: ActivityItem[] = (messages || []).map((message: SupabaseMessage) => ({
       id: message.id,

@@ -92,6 +92,7 @@ export function QuickBook({ eventId, onSuccess }: QuickBookProps) {
               eventId={eventId}
               onSubmit={handleSubmit}
               isSubmitting={isSubmitting}
+              error={error}
             />
             
             <div className="mt-4">
