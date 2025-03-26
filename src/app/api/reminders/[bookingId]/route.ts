@@ -36,7 +36,7 @@ export async function POST(
     }
 
     // Send the reminder
-    const result = await reminderService.sendBookingReminder(bookingId, reminderType);
+    const result = await reminderService.sendManualReminder(bookingId, reminderType);
 
     if (!result.success) {
       return NextResponse.json(

@@ -14,14 +14,35 @@ export type SMSMessageType =
   | 'custom'
   | 'test';
 
+export type SMSStatus = 
+  | 'queued'
+  | 'sent'
+  | 'delivered'
+  | 'failed'
+  | 'undelivered'
+  | 'simulated';
+
 export interface SMSMessage {
   id: string;
   booking_id: string;
   message_type: string;
   message: string;
-  status: string;
+  status: SMSStatus;
   sent_at: string;
   recipient?: string;
+}
+
+export interface SMSReply {
+  id: string;
+  customer_id: string;
+  from_number: string;
+  message_content: string;
+  received_at: string;
+  read: boolean;
+  customer?: {
+    first_name: string;
+    last_name: string;
+  };
 }
 
 export interface SMSRequest {
@@ -338,5 +359,231 @@ export const smsService = {
       logger.error('Error sending booking confirmation SMS:', error);
       return { success: false, error: error.message || 'Failed to send confirmation SMS' };
     }
+  },
+  
+  /**
+   * Process an incoming SMS reply
+   * @param params Object containing the sender's number and message content
+   * @returns Result of the operation
+   */
+  async receiveReply(params: { fromNumber: string; messageContent: string }): Promise<{
+    success: boolean;
+    error?: any;
+  }> {
+    try {
+      logger.info(`Received SMS reply from ${params.fromNumber}`);
+      
+      // Look up the customer by their mobile number
+      const { data: customers, error: customerError } = await supabase
+        .from('customers')
+        .select('id, first_name, last_name')
+        .eq('mobile_number', params.fromNumber);
+      
+      if (customerError) {
+        logger.error('Error looking up customer:', customerError);
+        return { success: false, error: customerError };
+      }
+      
+      // Store the reply in the database
+      const { data, error } = await supabase
+        .from('sms_messages')
+        .insert({
+          customer_id: customers && customers.length > 0 ? customers[0].id : null,
+          phone_number: params.fromNumber,
+          content: params.messageContent,
+          message_type: 'reply',
+          status: 'received',
+          direction: 'inbound',
+          is_read: false,
+          sent_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      
+      if (error) {
+        logger.error('Error storing SMS reply:', error);
+        return { success: false, error };
+      }
+      
+      logger.info(`Successfully stored SMS reply with ID: ${data.id}`);
+      return { success: true };
+    } catch (error) {
+      logger.error('Error processing SMS reply:', error);
+      return { success: false, error };
+    }
+  },
+  
+  /**
+   * Get all SMS replies for display in the messages table
+   * @returns List of SMS replies
+   */
+  async getReplies(): Promise<{ data: SMSReply[]; error?: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('sms_messages')
+        .select(`
+          id,
+          customer_id,
+          phone_number as from_number,
+          content as message_content,
+          sent_at as received_at,
+          is_read as read,
+          customers:customer_id (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('direction', 'inbound')
+        .order('sent_at', { ascending: false });
+      
+      if (error) {
+        logger.error('Error fetching SMS replies:', error);
+        return { data: [], error };
+      }
+      
+      // Use a more explicit type assertion with unknown as intermediate step
+      return { data: (data as unknown) as SMSReply[] };
+    } catch (error) {
+      logger.error('Error fetching SMS replies:', error);
+      return { data: [], error };
+    }
+  },
+  
+  /**
+   * Get SMS replies for a specific customer
+   * @param customerId The customer ID to get replies for
+   * @returns List of SMS replies from the customer
+   */
+  async getRepliesByCustomer(customerId: string): Promise<{ data: SMSReply[]; error?: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('sms_messages')
+        .select(`
+          id,
+          customer_id,
+          phone_number as from_number,
+          content as message_content,
+          sent_at as received_at,
+          is_read as read,
+          customers:customer_id (
+            first_name,
+            last_name
+          )
+        `)
+        .eq('direction', 'inbound')
+        .eq('customer_id', customerId)
+        .order('sent_at', { ascending: false });
+      
+      if (error) {
+        logger.error(`Error fetching SMS replies for customer ${customerId}:`, error);
+        return { data: [], error };
+      }
+      
+      // Use a more explicit type assertion with unknown as intermediate step
+      return { data: (data as unknown) as SMSReply[] };
+    } catch (error) {
+      logger.error(`Error fetching SMS replies for customer ${customerId}:`, error);
+      return { data: [], error };
+    }
+  },
+  
+  /**
+   * Mark a specific SMS reply as read
+   * @param id Reply ID to mark as read
+   * @returns Success status
+   */
+  async markReplyAsRead(id: string): Promise<{ success: boolean; error?: any }> {
+    try {
+      const { error } = await supabase
+        .from('sms_messages')
+        .update({ is_read: true })
+        .eq('id', id);
+      
+      if (error) {
+        logger.error(`Error marking SMS reply ${id} as read:`, error);
+        return { success: false, error };
+      }
+      
+      return { success: true };
+    } catch (error) {
+      logger.error(`Error marking SMS reply ${id} as read:`, error);
+      return { success: false, error };
+    }
+  },
+  
+  /**
+   * Mark all SMS replies as read
+   * @returns Success status
+   */
+  async markAllRepliesAsRead(): Promise<{ success: boolean; error?: any }> {
+    try {
+      const { error } = await supabase
+        .from('sms_messages')
+        .update({ is_read: true })
+        .eq('direction', 'inbound')
+        .eq('is_read', false);
+      
+      if (error) {
+        logger.error('Error marking all SMS replies as read:', error);
+        return { success: false, error };
+      }
+      
+      return { success: true };
+    } catch (error) {
+      logger.error('Error marking all SMS replies as read:', error);
+      return { success: false, error };
+    }
+  },
+  
+  /**
+   * Send an SMS to a specific customer
+   * @param params Object containing customer, message content, and other details
+   * @returns Result of the SMS sending operation
+   */
+  async sendSMSToCustomer(params: {
+    customer: { id: string; mobile_number?: string };
+    messageType: string;
+    messageContent: string;
+    bookingId?: string | null;
+  }): Promise<{
+    success: boolean;
+    error?: any;
+  }> {
+    try {
+      const { customer, messageType, messageContent, bookingId } = params;
+      
+      // Check if customer has a mobile number
+      if (!customer.mobile_number) {
+        return {
+          success: false,
+          error: 'Customer has no mobile number'
+        };
+      }
+      
+      // Format the mobile number
+      const formattedNumber = this.formatPhoneNumber(customer.mobile_number);
+      if (!formattedNumber) {
+        return {
+          success: false,
+          error: 'Invalid phone number format'
+        };
+      }
+      
+      // Send the SMS
+      return await this.sendSMS({
+        to: formattedNumber,
+        message: messageContent,
+        booking_id: bookingId || customer.id, // Use booking ID or customer ID as a fallback
+        message_type: messageType
+      });
+    } catch (error) {
+      logger.error('Error sending SMS to customer:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   }
 }; 
+
+export default smsService; 

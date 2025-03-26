@@ -227,10 +227,10 @@ export default function SMSTemplatesPage() {
       content = content.replace(/{seats}/g, testMessage.seats);
 
       // Send the test message
-      const result = await smsService.sendTestMessage({
-        phoneNumber: testMessage.phoneNumber,
-        messageContent: content
-      });
+      const result = await smsService.sendTestMessage(
+        testMessage.phoneNumber,
+        content
+      );
       
       if (result.success) {
         toast.success('Test message sent successfully');

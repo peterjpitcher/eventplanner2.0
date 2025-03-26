@@ -117,7 +117,7 @@ export function MobileNav() {
     <div className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-10">
       <div className="flex justify-around">
         {navigationWithBadges.map((item) => {
-          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          const isActive = pathname === item.href || (pathname?.startsWith(`${item.href}/`) ?? false);
           return (
             <Link
               key={item.name}

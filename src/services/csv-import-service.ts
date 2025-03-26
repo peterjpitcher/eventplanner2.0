@@ -124,11 +124,17 @@ export const csvImportService = {
       errors.mobile_number = 'Mobile number is required';
     } else {
       // Format the mobile number
-      customerData.mobile_number = formatUKMobileNumber(customerData.mobile_number);
+      const formattedNumber = formatUKMobileNumber(customerData.mobile_number);
       
-      // Check if it's valid
-      if (!isValidUKMobileNumber(customerData.mobile_number)) {
+      if (!formattedNumber) {
         errors.mobile_number = 'Invalid UK mobile number format';
+      } else {
+        customerData.mobile_number = formattedNumber;
+        
+        // Check if it's valid
+        if (!isValidUKMobileNumber(customerData.mobile_number)) {
+          errors.mobile_number = 'Invalid UK mobile number format';
+        }
       }
     }
     

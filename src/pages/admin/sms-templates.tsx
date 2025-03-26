@@ -1,5 +1,3 @@
-'use client';
-
 import React, { useEffect, useState } from 'react';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,14 +6,30 @@ import { getAllTemplates, getTemplateDetails } from '@/lib/templates';
 import TemplateEditor from '@/components/sms/TemplateEditor';
 import TemplatePreview from '@/components/sms/TemplatePreview';
 import TestMessageForm from '@/components/sms/TestMessageForm';
+import ClientOnly from '@/components/client-only';
+
+// Mark as dynamic to avoid pre-rendering
+export const dynamic = "force-dynamic";
 
 export default function SMSTemplatesPage() {
+  return (
+    <ClientOnly fallback={
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin h-8 w-8 border-4 border-blue-500 rounded-full border-t-transparent"></div>
+      </div>
+    }>
+      <SMSTemplatesContent />
+    </ClientOnly>
+  );
+}
+
+// Actual page content, only rendered on client
+function SMSTemplatesContent() {
   const [templates, setTemplates] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTemplate, setActiveTemplate] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('editor');
   
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     loadTemplates();
   }, []);

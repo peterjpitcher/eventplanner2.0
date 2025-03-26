@@ -12,7 +12,7 @@ import { Alert } from '@/components/ui/alert';
 
 export default function BookingPage() {
   const params = useParams();
-  const id = params.id as string;
+  const id = params?.id as string;
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -24,6 +24,10 @@ export default function BookingPage() {
   useEffect(() => {
     const fetchBookingData = async () => {
       try {
+        if (!id) {
+          throw new Error('No booking ID provided');
+        }
+        
         setIsLoading(true);
         
         // Fetch booking data
@@ -46,7 +50,7 @@ export default function BookingPage() {
           : 'Unknown Customer');
         
         // Get SMS messages
-        const { data: messages } = await smsService.getMessagesByBooking(id);
+        const { data: messages } = await smsService.getSMSMessagesByBookingId(id);
         setSmsMessages(messages || []);
         
       } catch (err) {

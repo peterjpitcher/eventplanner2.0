@@ -78,7 +78,7 @@ export const EditEventForm: React.FC<EditEventFormProps> = ({ event, categories 
     setError(null);
 
     try {
-      const { error, smsResults } = await eventService.cancelEvent(event.id, sendSMS, customMessage);
+      const { error, smsStats } = await eventService.cancelEvent(event.id, sendSMS);
       
       if (error) {
         setError(error);
@@ -87,10 +87,10 @@ export const EditEventForm: React.FC<EditEventFormProps> = ({ event, categories 
         return;
       }
       
-      if (sendSMS && smsResults) {
-        if (smsResults.messagesSent > 0) {
-          toast.success(`Event cancelled successfully. ${smsResults.messagesSent} notification${smsResults.messagesSent !== 1 ? 's' : ''} sent.`);
-        } else if (smsResults.totalBookings > 0) {
+      if (sendSMS && smsStats) {
+        if (smsStats.sent > 0) {
+          toast.success(`Event cancelled successfully. ${smsStats.sent} notification${smsStats.sent !== 1 ? 's' : ''} sent.`);
+        } else if (smsStats.total > 0) {
           toast.warning(`Event cancelled but no SMS notifications were sent. Please check the logs.`);
         } else {
           toast.success('Event cancelled successfully. No bookings to notify.');

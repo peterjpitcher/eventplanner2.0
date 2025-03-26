@@ -26,6 +26,14 @@ export async function POST(req: NextRequest) {
 
     // Format the phone number to our standard format
     const formattedNumber = formatUKMobileNumber(fromNumber);
+    
+    // Skip processing if the phone number is invalid
+    if (!formattedNumber) {
+      return NextResponse.json(
+        { error: 'Invalid phone number format' },
+        { status: 400 }
+      );
+    }
 
     // Process the SMS reply
     const result = await smsService.receiveReply({

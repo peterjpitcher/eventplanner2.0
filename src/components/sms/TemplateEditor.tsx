@@ -77,7 +77,7 @@ export default function TemplateEditor({
           className="w-full min-h-[150px] font-mono"
         />
         <p className="text-sm text-gray-500 mt-1">
-          Use {{placeholders}} for variable content. Max length: 160 characters for standard SMS.
+          Use {'{{'}{'{'}placeholders{'}'}{'}}'} for variable content. Max length: 160 characters for standard SMS.
         </p>
         <div className="text-right text-sm text-gray-500 mt-1">
           {content.length} / 160 characters

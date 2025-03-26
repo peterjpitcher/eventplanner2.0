@@ -18,7 +18,7 @@ export function SMSMessageList({ bookingId }: SMSMessageListProps) {
       setIsLoading(true);
       
       try {
-        const { data, error } = await smsService.getMessagesByBooking(bookingId);
+        const { data, error } = await smsService.getSMSMessagesByBookingId(bookingId);
         
         if (error) {
           console.error('Error fetching SMS messages:', error);
@@ -79,7 +79,7 @@ export function SMSMessageList({ bookingId }: SMSMessageListProps) {
                     <SMSStatusIndicator status={message.status} />
                   </div>
                   <p className="mt-2 text-sm text-gray-500 whitespace-pre-line">
-                    {message.message_content}
+                    {message.message}
                   </p>
                 </div>
                 <div className="ml-4 flex-shrink-0">

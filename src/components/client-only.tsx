@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, ReactNode } from 'react';
+import { useEffect, useState, ReactNode } from 'react';
 
 interface ClientOnlyProps {
   children: ReactNode;
@@ -11,18 +11,12 @@ interface ClientOnlyProps {
  * ClientOnly wraps client components to ensure they're only rendered in the browser.
  * This avoids hydration errors when components use browser-only APIs.
  */
-export function ClientOnly({ children, fallback = null }: ClientOnlyProps) {
-  const [isMounted, setIsMounted] = useState(false);
+export default function ClientOnly({ children, fallback = null }: ClientOnlyProps) {
+  const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
-    setIsMounted(true);
+    setIsClient(true);
   }, []);
 
-  if (!isMounted) {
-    return <>{fallback}</>;
-  }
-
-  return <>{children}</>;
-}
-
-export default ClientOnly; 
+  return isClient ? <>{children}</> : <>{fallback}</>;
+} 

@@ -131,7 +131,7 @@ export function Sidebar() {
         <div className="mt-5 flex-grow flex flex-col">
           <nav className="flex-1 px-2 pb-4 space-y-1">
             {navigationWithBadges.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+              const isActive = pathname === item.href || (pathname?.startsWith(`${item.href}/`) ?? false);
               return (
                 <Link
                   key={item.name}
