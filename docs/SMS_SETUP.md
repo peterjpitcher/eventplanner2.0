@@ -27,7 +27,7 @@ Add the following environment variables to your `.env` file:
 SMS_PROVIDER=mockSms  # Options: mockSms, twilio
 SMS_ENABLED=true      # Set to false to disable SMS completely
 SMS_DEFAULT_COUNTRY_CODE=44  # Default country code (without +)
-MOCK_SMS_DELAY=2000   # Delay in ms for mock SMS (for testing)
+MOCK_SMS_DELAY=2000   # Delay in ms for mock SMS provider (for testing)
 
 # Twilio Configuration (only needed if SMS_PROVIDER=twilio)
 TWILIO_ACCOUNT_SID=your_account_sid
@@ -130,6 +130,72 @@ Staff can also send manual reminders for individual bookings:
 3. Click "Send Reminder"
 4. Select the reminder type (7-day or 24-hour)
 5. Confirm sending the reminder
+
+## Monitoring Reminders in Production
+
+### GitHub Actions Workflow Monitoring
+
+The automated reminder system has several monitoring features built-in:
+
+1. **Workflow Status**:
+   - Check the workflow status in the "Actions" tab of your GitHub repository
+   - Green checkmark indicates successful execution
+   - Red X indicates a failure
+
+2. **Error Notifications**:
+   - If the reminder process fails, it automatically creates a GitHub issue
+   - The issue includes details about the failure and a link to the workflow run
+
+3. **Workflow Run Logs**:
+   - Each workflow run produces detailed logs
+   - Logs include counts of reminders processed, successes, and failures
+   - Access logs by clicking on the workflow run in the GitHub Actions tab
+
+### Database Monitoring
+
+You can monitor the reminder system's activity through the database:
+
+1. **Booking Columns**:
+   - The `reminder_7day_sent` and `reminder_24hr_sent` columns track which reminders have been sent
+   - Query these columns to identify upcoming reminders or verify past activity
+
+2. **SMS Messages Table**:
+   - All SMS activity is recorded in the database
+   - Query this table to track message delivery status and content
+
+### Manual Verification
+
+For direct verification of the reminder system:
+
+1. **Check Tomorrow's Events**:
+   - Find events scheduled for tomorrow
+   - Verify that 24-hour reminders have been sent for the bookings
+   - The reminder status is visible on each booking's detail page
+
+2. **Check Next Week's Events**:
+   - Find events scheduled for 7 days from now
+   - Verify that 7-day reminders have been sent for the bookings
+   - The reminder status is visible on each booking's detail page
+
+### Troubleshooting Failed Reminders
+
+If reminders fail to send:
+
+1. **Check Workflow Logs**:
+   - Review the GitHub Actions logs for error messages
+   - Common errors include authentication failures and network issues
+
+2. **Verify Environment Variables**:
+   - Ensure all required environment variables are correctly set
+   - Check that `API_AUTH_TOKEN` matches between GitHub and your application
+
+3. **Test API Endpoint**:
+   - Use cURL or Postman to test the reminder API endpoint directly
+   - This can help identify if the issue is with the API or the workflow
+
+4. **Check SMS Provider**:
+   - If reminders are identified but SMS messages fail to send, check your SMS provider configuration
+   - For Twilio, verify your account credentials and balance
 
 ## Troubleshooting
 
