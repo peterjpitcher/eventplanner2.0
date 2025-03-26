@@ -1,18 +1,18 @@
+import { EventCategory } from '@/services/event-category-service';
+
 export interface Event {
   id: string;
-  name: string;
-  description: string;
+  title: string;
+  description: string | null;
+  category_id: string | null;
   date: string;
-  time: string;
-  location: string;
-  capacity: number;
-  price: number;
+  start_time: string;
+  capacity: number | null;
+  notes: string | null;
+  is_published: boolean;
   is_canceled: boolean;
-  category_id: string;
   created_at: string;
   updated_at: string;
-  category: {
-    id: string;
-    name: string;
-  };
+  // Join data
+  category?: EventCategory | null;
 } 

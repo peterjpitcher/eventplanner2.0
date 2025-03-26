@@ -22,8 +22,10 @@ export default async function CreateEventPage() {
         description="Fill in the form below to create a new event"
       />
 
-      <div className="bg-white shadow rounded-lg p-6 mt-6">
-        <CreateEventForm categories={categories || []} />
+      <div className="mt-6 bg-white shadow-sm rounded-lg border border-gray-200">
+        <div className="px-6 py-8">
+          <CreateEventForm categories={categories || []} />
+        </div>
       </div>
     </div>
   );

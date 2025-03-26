@@ -8,6 +8,7 @@ import { FormGroup } from '../ui/form-group';
 import { Button } from '../ui/button';
 import { Spinner } from '../ui/spinner';
 import { Alert } from '../ui/alert';
+import { Input } from '../ui/input';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 
@@ -33,11 +34,8 @@ export const EventForm: React.FC<EventFormProps> = ({
     category_id: null,
     date: new Date().toISOString().split('T')[0],
     start_time: '09:00',
-    end_time: null,
-    duration: null,
-    price: null,
     capacity: null,
-    location: '',
+    notes: '',
     is_published: false,
   });
   const [eventDate, setEventDate] = useState<Date | null>(new Date());
@@ -51,11 +49,8 @@ export const EventForm: React.FC<EventFormProps> = ({
         category_id: event.category_id,
         date: event.date,
         start_time: event.start_time,
-        end_time: event.end_time,
-        duration: event.duration,
-        price: event.price,
         capacity: event.capacity,
-        location: event.location || '',
+        notes: event.notes || '',
         is_published: event.is_published,
       });
 
@@ -75,9 +70,7 @@ export const EventForm: React.FC<EventFormProps> = ({
       if (selectedCategory) {
         setFormData((prevData) => ({
           ...prevData,
-          price: prevData.price ?? selectedCategory.default_price,
           capacity: prevData.capacity ?? selectedCategory.default_capacity,
-          duration: prevData.duration ?? selectedCategory.default_duration,
         }));
       }
     }
@@ -130,25 +123,19 @@ export const EventForm: React.FC<EventFormProps> = ({
         </Alert>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-6">
-          <FormGroup
+          <Input
             label="Title"
-            htmlFor="title"
+            id="title"
+            name="title"
+            type="text"
+            value={formData.title}
+            onChange={handleChange}
             required
+            placeholder="Event title"
             error={error?.title}
-          >
-            <input
-              id="title"
-              name="title"
-              type="text"
-              value={formData.title}
-              onChange={handleChange}
-              required
-              className="input"
-              placeholder="Event title"
-            />
-          </FormGroup>
+          />
 
           <FormGroup
             label="Category"
@@ -160,7 +147,7 @@ export const EventForm: React.FC<EventFormProps> = ({
               name="category_id"
               value={formData.category_id || ''}
               onChange={handleChange}
-              className="input"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
             >
               <option value="">-- Select a category --</option>
               {categories.map((category) => (
@@ -182,24 +169,24 @@ export const EventForm: React.FC<EventFormProps> = ({
               value={formData.description || ''}
               onChange={handleChange}
               rows={4}
-              className="input"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               placeholder="Event description"
             />
           </FormGroup>
 
           <FormGroup
-            label="Location"
-            htmlFor="location"
-            error={error?.location}
+            label="Notes"
+            htmlFor="notes"
+            error={error?.notes}
           >
-            <input
-              id="location"
-              name="location"
-              type="text"
-              value={formData.location || ''}
+            <textarea
+              id="notes"
+              name="notes"
+              value={formData.notes || ''}
               onChange={handleChange}
-              className="input"
-              placeholder="Event location"
+              rows={4}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              placeholder="Additional notes"
             />
           </FormGroup>
         </div>
@@ -214,103 +201,38 @@ export const EventForm: React.FC<EventFormProps> = ({
             <DatePicker
               selected={eventDate}
               onChange={handleDateChange}
-              className="input w-full"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
               dateFormat="yyyy-MM-dd"
               minDate={new Date()}
               required
             />
           </FormGroup>
 
-          <div className="grid grid-cols-2 gap-4">
-            <FormGroup
-              label="Start Time"
-              htmlFor="start_time"
-              required
-              error={error?.start_time}
-            >
-              <input
-                id="start_time"
-                name="start_time"
-                type="time"
-                value={formData.start_time}
-                onChange={handleChange}
-                required
-                className="input"
-              />
-            </FormGroup>
+          <Input
+            label="Start Time"
+            id="start_time"
+            name="start_time"
+            type="time"
+            value={formData.start_time}
+            onChange={handleChange}
+            required
+            error={error?.start_time}
+          />
 
-            <FormGroup
-              label="End Time (optional)"
-              htmlFor="end_time"
-              error={error?.end_time}
-            >
-              <input
-                id="end_time"
-                name="end_time"
-                type="time"
-                value={formData.end_time || ''}
-                onChange={handleChange}
-                className="input"
-              />
-            </FormGroup>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <FormGroup
-              label="Duration (minutes)"
-              htmlFor="duration"
-              error={error?.duration}
-            >
-              <input
-                id="duration"
-                name="duration"
-                type="number"
-                min="0"
-                value={formData.duration || ''}
-                onChange={handleChange}
-                className="input"
-                placeholder="Duration"
-              />
-            </FormGroup>
-
-            <FormGroup
-              label="Price"
-              htmlFor="price"
-              error={error?.price}
-            >
-              <input
-                id="price"
-                name="price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={formData.price || ''}
-                onChange={handleChange}
-                className="input"
-                placeholder="Price"
-              />
-            </FormGroup>
-
-            <FormGroup
-              label="Capacity"
-              htmlFor="capacity"
-              error={error?.capacity}
-            >
-              <input
-                id="capacity"
-                name="capacity"
-                type="number"
-                min="0"
-                value={formData.capacity || ''}
-                onChange={handleChange}
-                className="input"
-                placeholder="Capacity"
-              />
-            </FormGroup>
-          </div>
+          <Input
+            label="Capacity"
+            id="capacity"
+            name="capacity"
+            type="number"
+            min="0"
+            value={formData.capacity || ''}
+            onChange={handleChange}
+            placeholder="Capacity"
+            error={error?.capacity}
+          />
 
           <div className="pt-4">
-            <label className="flex items-center">
+            <label className="flex items-center space-x-2">
               <input
                 id="is_published"
                 name="is_published"
@@ -319,15 +241,15 @@ export const EventForm: React.FC<EventFormProps> = ({
                 onChange={(e) =>
                   setFormData({ ...formData, is_published: e.target.checked })
                 }
-                className="mr-2"
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               />
-              <span>Publish event (visible to all users)</span>
+              <span className="text-sm text-gray-700">Publish event (visible to all users)</span>
             </label>
           </div>
         </div>
       </div>
 
-      <div className="flex justify-end space-x-4 pt-4">
+      <div className="flex justify-end space-x-4 pt-6 border-t border-gray-200">
         <Button variant="outline" onClick={handleCancel}>
           Cancel
         </Button>

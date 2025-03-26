@@ -25,25 +25,27 @@ This document outlines the database schema for the Event Planner application.
 ### events
 
 - `id` (UUID, PK): Unique identifier for the event
-- `name` (TEXT): Name of the event
+- `title` (TEXT): Title of the event
 - `description` (TEXT, nullable): Description of the event
 - `category_id` (UUID, FK): Reference to the event_categories table
+- `date` (DATE): Date of the event
+- `start_time` (TIME): When the event starts
 - `capacity` (INTEGER): Maximum number of attendees
-- `start_time` (TIMESTAMP): When the event starts
 - `notes` (TEXT, nullable): Additional notes about the event
 - `is_published` (BOOLEAN): Whether the event is published
 - `is_canceled` (BOOLEAN): Whether the event has been canceled
 - `created_at` (TIMESTAMP): When the event was created
 - `updated_at` (TIMESTAMP): When the event was last updated
+- `created_by` (UUID, FK): Reference to auth.users table
 
 ### bookings
 
 - `id` (UUID, PK): Unique identifier for the booking
-- `customer_id` (UUID, FK): Reference to the customers table
 - `event_id` (UUID, FK): Reference to the events table
-- `seats_or_reminder` (TEXT): Number of seats booked or reminder flag
-- `notes` (TEXT, nullable): Additional notes about the booking
+- `customer_id` (UUID, FK): Reference to the customers table
+- `status` (TEXT): Status of the booking (pending, confirmed, cancelled)
 - `created_at` (TIMESTAMP): When the booking was created
+- `updated_at` (TIMESTAMP): When the booking was last updated
 
 ### sms_messages
 
@@ -69,23 +71,16 @@ This document outlines the database schema for the Event Planner application.
 
 ### events_view
 
-A view that maps the events table to the expected interface in the application:
+A view that provides a comprehensive view of events with related information:
 
-- `id` -> `id`
-- `name` -> `title`
-- `description` -> `description`
-- `category_id` -> `category_id`
-- `start_time::date` -> `date`
-- `start_time::time` -> `start_time`
-- `capacity` -> `capacity`
-- `is_published` -> `is_published`
-- `is_canceled` -> `is_canceled`
-- `created_at` -> `created_at`
-- `updated_at` -> `updated_at`
+- All fields from the events table
+- `category_name` (TEXT): Name of the event category
+- `creator_email` (TEXT): Email of the user who created the event
 
 ## Relationships
 
 - Each event belongs to a category (events.category_id -> event_categories.id)
+- Each event is created by a user (events.created_by -> auth.users.id)
 - Each booking is for a specific event (bookings.event_id -> events.id)
 - Each booking is for a specific customer (bookings.customer_id -> customers.id)
 - Each SMS message is for a specific customer (sms_messages.customer_id -> customers.id)
@@ -94,4 +89,21 @@ A view that maps the events table to the expected interface in the application:
 
 ## Row Level Security (RLS)
 
-All tables have Row Level Security (RLS) policies that allow authenticated users to select, insert, and update rows. 
+All tables have Row Level Security (RLS) policies that restrict access based on user authentication:
+
+### Events Table RLS Policies
+- Users can only view their own events
+- Users can only insert events they create
+- Users can only update their own events
+- Users can only delete their own events
+
+### Other Tables
+- Authenticated users can read all records
+- Authenticated users can insert new records
+- Authenticated users can update records
+- Authenticated users can delete records
+
+## Triggers
+
+### update_modified_column
+Automatically updates the `updated_at` timestamp whenever a record is modified in tables that have this column. 

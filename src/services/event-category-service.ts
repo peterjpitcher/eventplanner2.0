@@ -3,22 +3,17 @@ import { supabase } from '@/lib/supabase';
 export interface EventCategory {
   id: string;
   name: string;
-  description: string | null;
-  color: string;
-  default_price: number | null;
-  default_capacity: number | null;
-  default_duration: number | null;
+  default_capacity: number;
+  default_start_time: string;
+  notes: string | null;
   created_at: string;
-  updated_at: string;
 }
 
 export interface EventCategoryFormData {
   name: string;
-  description: string | null;
-  color: string;
-  default_price: number | null;
-  default_capacity: number | null;
-  default_duration: number | null;
+  default_capacity: number;
+  default_start_time: string;
+  notes: string | null;
 }
 
 export const eventCategoryService = {

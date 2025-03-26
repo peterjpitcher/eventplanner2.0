@@ -41,8 +41,10 @@ export default async function EditEventPage({ params }: { params: { id: string }
         description="Update the event details below"
       />
 
-      <div className="bg-white shadow rounded-lg p-6 mt-6">
-        <EditEventForm event={event} categories={categories || []} />
+      <div className="mt-6 bg-white shadow-sm rounded-lg border border-gray-200">
+        <div className="px-6 py-8">
+          <EditEventForm event={event} categories={categories || []} />
+        </div>
       </div>
     </div>
   );

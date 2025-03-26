@@ -10,17 +10,15 @@ export interface Event {
   category_id: string | null;
   date: string;
   start_time: string;
-  end_time: string | null;
-  duration: number | null;
-  price: number | null;
   capacity: number | null;
-  location: string | null;
+  notes: string | null;
   is_published: boolean;
   is_canceled: boolean;
   created_at: string;
   updated_at: string;
-  // Join data
-  category?: EventCategory | null;
+  created_by: string;
+  category_name: string | null;
+  creator_email: string | null;
 }
 
 export interface EventFormData {
@@ -29,11 +27,8 @@ export interface EventFormData {
   category_id: string | null;
   date: string;
   start_time: string;
-  end_time: string | null;
-  duration: number | null;
-  price: number | null;
   capacity: number | null;
-  location: string | null;
+  notes: string | null;
   is_published: boolean;
 }
 
@@ -44,18 +39,10 @@ export const eventService = {
   async getEvents(): Promise<{ data: Event[] | null; error: any }> {
     const { data, error } = await supabase
       .from('events_view')
-      .select(`
-        *,
-        category:category_id (
-          id,
-          name,
-          description,
-          color
-        )
-      `)
+      .select('*')
       .order('date', { ascending: true })
       .order('start_time', { ascending: true });
-    
+   
     return { data, error };
   },
 
@@ -72,8 +59,10 @@ export const eventService = {
         category:category_id (
           id,
           name,
-          description,
-          color
+          default_capacity,
+          default_start_time,
+          notes,
+          created_at
         )
       `)
       .gte('date', today) // Events today or in the future
@@ -96,11 +85,10 @@ export const eventService = {
         category:category_id (
           id,
           name,
-          description,
-          color,
-          default_price,
           default_capacity,
-          default_duration
+          default_start_time,
+          notes,
+          created_at
         )
       `)
       .eq('id', id)
@@ -113,14 +101,24 @@ export const eventService = {
    * Create a new event
    */
   async createEvent(event: EventFormData): Promise<{ data: Event | null; error: any }> {
+    // Get the current user's ID
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      return { data: null, error: userError };
+    }
+
     // Convert from the form data format to the database format
     const dbEvent = {
-      name: event.title,
+      title: event.title,
       description: event.description,
       category_id: event.category_id,
-      start_time: new Date(`${event.date}T${event.start_time}`).toISOString(),
+      date: event.date,
+      start_time: event.start_time,
       capacity: event.capacity,
-      is_published: event.is_published
+      notes: event.notes,
+      is_published: event.is_published,
+      created_by: user.id
     };
 
     const { data, error } = await supabase
@@ -142,11 +140,13 @@ export const eventService = {
   async updateEvent(id: string, event: EventFormData): Promise<{ data: Event | null; error: any }> {
     // Convert from the form data format to the database format
     const dbEvent = {
-      name: event.title,
+      title: event.title,
       description: event.description,
       category_id: event.category_id,
-      start_time: new Date(`${event.date}T${event.start_time}`).toISOString(),
+      date: event.date,
+      start_time: event.start_time,
       capacity: event.capacity,
+      notes: event.notes,
       is_published: event.is_published
     };
 
@@ -246,8 +246,10 @@ export const eventService = {
         category:category_id (
           id,
           name,
-          description,
-          color
+          default_capacity,
+          default_start_time,
+          notes,
+          created_at
         )
       `)
       .eq('category_id', categoryId)

@@ -6,11 +6,8 @@ CREATE TABLE events (
   category_id UUID REFERENCES event_categories(id),
   date DATE NOT NULL,
   start_time TIME NOT NULL,
-  end_time TIME,
-  duration INTEGER, -- in minutes
-  price DECIMAL(10, 2),
   capacity INTEGER,
-  location TEXT,
+  notes TEXT,
   is_published BOOLEAN DEFAULT false,
   is_canceled BOOLEAN DEFAULT false,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT now() NOT NULL,
