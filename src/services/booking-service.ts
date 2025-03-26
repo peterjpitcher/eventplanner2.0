@@ -7,6 +7,7 @@ import { eventService } from './event-service';
 import { format } from 'date-fns';
 import { ApiResponse } from '@/types';
 import { checkAndEnsureSmsConfig } from '@/lib/sms-utils';
+import { sendSMS } from '@/lib/sms-utils';
 
 export interface Booking {
   id: string;
@@ -172,23 +173,63 @@ export const bookingService = {
   },
 
   /**
-   * Send booking confirmation SMS
+   * Send a booking confirmation SMS
    */
-  async sendConfirmationSMS(booking: Booking, customer: Customer, event: Event): Promise<{ success: boolean; error?: any }> {
+  async sendConfirmationSMS(
+    booking: Booking,
+    customer: Customer,
+    event: Event
+  ): Promise<{ success: boolean; error?: any }> {
     try {
-      const { formattedDate, formattedTime } = this.formatSMSDateTime(event.start_time);
+      // Fetch the booking confirmation template
+      const { data: template } = await supabase
+        .from('sms_templates')
+        .select('*')
+        .eq('id', 'booking_confirmation')
+        .single();
       
-      const smsResult = await smsService.sendBookingConfirmation({
-        customerId: customer.id,
-        bookingId: booking.id,
-        eventName: event.title,
-        eventDate: formattedDate,
-        eventTime: formattedTime,
-        seats: booking.seats_or_reminder,
-        customerName: customer.first_name
-      });
+      if (!template) {
+        console.error('Booking confirmation template not found');
+        return { success: false, error: 'SMS template not found' };
+      }
       
-      return { success: smsResult.success, error: smsResult.error };
+      // Format the event date and time
+      const eventDate = format(new Date(event.date), 'MMMM d');
+      const eventTime = event.start_time;
+      
+      // Process the template with booking data
+      let messageContent = template.content;
+      messageContent = messageContent.replace(/{customer_name}/g, `${customer.first_name} ${customer.last_name || ''}`);
+      messageContent = messageContent.replace(/{customer_first_name}/g, customer.first_name);
+      messageContent = messageContent.replace(/{event_name}/g, event.title);
+      messageContent = messageContent.replace(/{event_date}/g, eventDate);
+      messageContent = messageContent.replace(/{event_time}/g, eventTime);
+      messageContent = messageContent.replace(/{seats}/g, booking.seats_or_reminder.toString());
+      messageContent = messageContent.replace(/{booking_id}/g, booking.id);
+      
+      console.log(`Sending booking confirmation SMS to ${customer.mobile_number}`);
+      
+      // Send the SMS
+      const result = await sendSMS(customer.mobile_number, messageContent);
+      
+      // Log the SMS in the database
+      try {
+        await supabase.from('sms_messages').insert({
+          customer_id: customer.id,
+          booking_id: booking.id,
+          message_type: 'booking_confirmation',
+          content: messageContent,
+          phone_number: customer.mobile_number,
+          sent_at: new Date().toISOString(),
+          status: result.success ? 'sent' : 'failed',
+          message_sid: result.message?.sid || null,
+          error: result.success ? null : JSON.stringify(result.error)
+        });
+      } catch (logError) {
+        console.error('Error logging SMS to database:', logError);
+      }
+      
+      return result;
     } catch (error) {
       console.error('Error sending booking confirmation SMS:', error);
       return { success: false, error };

@@ -6,148 +6,185 @@ import { formatUKMobileNumber } from './phone-utils';
 import { supabase } from './supabase';
 
 // Twilio client types
-interface TwilioMessage {
+type TwilioMessage = {
   sid: string;
   status: string;
-  body: string;
+  dateCreated: Date;
   to: string;
   from: string;
-  dateCreated: string;
-  dateUpdated: string;
-  errorCode?: string;
+  body: string;
   errorMessage?: string;
-}
-
-interface TwilioError {
-  status: number;
-  message: string;
-  code: string;
-  moreInfo: string;
-}
-
-type TwilioResponse = {
-  success: boolean;
-  message: TwilioMessage | null;
-  error: TwilioError | null;
+  errorCode?: string;
 };
 
+// Cached Twilio client
+let twilioClient: any = null;
+
+// Get Twilio client with proper initialization
+function getTwilioClient() {
+  if (twilioClient) return twilioClient;
+  
+  const accountSid = process.env.TWILIO_ACCOUNT_SID;
+  const authToken = process.env.TWILIO_AUTH_TOKEN;
+  
+  if (!accountSid || !authToken) {
+    throw new Error('Twilio credentials not configured');
+  }
+  
+  // Import Twilio dynamically to avoid issues with server components
+  const twilio = require('twilio');
+  twilioClient = twilio(accountSid, authToken);
+  return twilioClient;
+}
+
 /**
- * Send an SMS message using Twilio API
+ * Send an SMS message using Twilio
  */
 export async function sendSMS(
-  to: string, 
-  body: string,
-  from: string = process.env.TWILIO_PHONE_NUMBER || ''
-): Promise<TwilioResponse> {
+  to: string,
+  body: string
+): Promise<{ success: boolean; message?: TwilioMessage; error?: any }> {
   try {
-    // Ensure environment variables are set
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    console.log(`Preparing to send SMS to ${to}`);
     
-    if (!accountSid || !authToken || !from) {
-      console.error('Missing Twilio credentials or phone number');
-      return {
-        success: false,
-        message: null,
-        error: {
-          status: 500,
-          message: 'Missing Twilio credentials or phone number',
-          code: 'MISSING_CREDENTIALS',
-          moreInfo: 'Please check environment variables'
-        }
-      };
-    }
-
-    // Format the phone number
-    const formattedNumber = formatUKToE164(to);
-
-    // Check for development mode
-    if (process.env.NODE_ENV === 'development' && process.env.SMS_SIMULATION === 'true') {
-      console.log(`[SMS SIMULATION] To: ${formattedNumber}, From: ${from}, Message: ${body}`);
+    // First check if SMS is enabled
+    const { smsEnabled, message: configMessage } = await checkAndEnsureSmsConfig();
+    
+    if (!smsEnabled) {
+      console.log(`SMS is disabled: ${configMessage}. Simulating success.`);
       return {
         success: true,
         message: {
-          sid: 'SIMULATED_SID_' + Date.now(),
+          sid: `SIMULATED_${Date.now()}`,
           status: 'simulated',
-          body,
-          to: formattedNumber,
-          from,
-          dateCreated: new Date().toISOString(),
-          dateUpdated: new Date().toISOString(),
-        },
-        error: null
+          dateCreated: new Date(),
+          to,
+          from: 'SIMULATOR',
+          body
+        }
       };
     }
-
-    // Build status callback URL
-    const statusCallbackUrl = `${appUrl}/api/webhooks/twilio/status`;
-
-    // Real Twilio API call
-    const twilioClient = require('twilio')(accountSid, authToken);
     
-    const message = await twilioClient.messages.create({
-      body,
-      from,
-      to: formattedNumber,
-      statusCallback: statusCallbackUrl // Add status callback URL for delivery updates
-    });
-
-    return {
-      success: true,
-      message,
-      error: null
-    };
+    // Format the recipient's phone number to E.164 format
+    const formattedNumber = formatUKMobileNumber(to);
+    if (!formattedNumber) {
+      console.error(`Invalid phone number format: ${to}`);
+      return {
+        success: false,
+        error: `Invalid phone number format: ${to}`
+      };
+    }
+    
+    // Get the sender's phone number
+    const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+    if (!fromNumber) {
+      console.error('Twilio phone number not configured');
+      return {
+        success: false,
+        error: 'Twilio phone number not configured'
+      };
+    }
+    
+    console.log(`Sending SMS from ${fromNumber} to ${formattedNumber}`);
+    
+    try {
+      // Get Twilio client and send message
+      const client = getTwilioClient();
+      
+      const message = await client.messages.create({
+        body,
+        from: fromNumber,
+        to: formattedNumber
+      });
+      
+      console.log(`Message sent with SID: ${message.sid}, Status: ${message.status}`);
+      
+      return {
+        success: true,
+        message
+      };
+    } catch (twilioError: any) {
+      // Handle Twilio-specific errors
+      console.error('Twilio error sending SMS:', twilioError);
+      
+      // Format error message for user feedback
+      const errorMessage = twilioError.message || 'Unknown Twilio error';
+      const errorCode = twilioError.code || 'UNKNOWN';
+      
+      return {
+        success: false,
+        error: {
+          message: `Failed to send SMS: ${errorMessage}`,
+          code: errorCode,
+          details: twilioError
+        }
+      };
+    }
   } catch (error: any) {
-    console.error('Error sending SMS:', error);
+    console.error('Unexpected error sending SMS:', error);
     return {
       success: false,
-      message: null,
       error: {
-        status: error.status || 500,
-        message: error.message || 'Unknown error',
-        code: error.code || 'UNKNOWN_ERROR',
-        moreInfo: error.moreInfo || ''
+        message: `Unexpected error: ${error.message || 'Unknown error'}`,
+        details: error
       }
     };
   }
 }
 
 /**
- * Format a UK mobile number to E.164 format for Twilio
+ * Process a template string with placeholder values
  */
-export function formatUKToE164(mobileNumber: string): string {
-  // First standardize the format
-  const standardized = formatUKMobileNumber(mobileNumber);
-
-  // If starts with 0, replace with +44
-  if (standardized.startsWith('0')) {
-    return '+44' + standardized.substring(1);
+export function processTemplate(template: string, values: Record<string, string | number>): string {
+  let processed = template;
+  
+  // Replace each placeholder with its value
+  for (const [key, value] of Object.entries(values)) {
+    const placeholder = `{${key}}`;
+    processed = processed.replace(new RegExp(placeholder, 'g'), String(value));
   }
-
-  // If no country code, assume UK and add +44
-  if (!standardized.startsWith('+')) {
-    return '+44' + standardized;
-  }
-
-  return standardized;
+  
+  return processed;
 }
 
 /**
- * Process an SMS template with variable replacements
+ * Test Twilio connection without sending an actual message
  */
-export function processTemplate(template: string, variables: Record<string, string | undefined>): string {
-  let processed = template;
-  
-  // Replace all variables in the template
-  Object.entries(variables).forEach(([key, value]) => {
-    if (value !== undefined) {
-      const placeholder = new RegExp(`{{${key}}}`, 'g');
-      processed = processed.replace(placeholder, value);
+export async function testTwilioConnection(): Promise<{ success: boolean; message?: string; error?: any }> {
+  try {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    
+    if (!accountSid || !authToken) {
+      return {
+        success: false,
+        error: 'Missing Twilio credentials'
+      };
     }
-  });
-
-  return processed;
+    
+    try {
+      // Get account info instead of sending a message
+      const client = getTwilioClient();
+      const account = await client.api.accounts(accountSid).fetch();
+      
+      return {
+        success: true,
+        message: `Connected to Twilio account: ${account.friendlyName || account.sid}`
+      };
+    } catch (twilioError: any) {
+      // Handle Twilio-specific errors
+      return {
+        success: false,
+        error: `Twilio authentication failed: ${twilioError.message || 'Unknown Twilio error'}`
+      };
+    }
+  } catch (error: any) {
+    console.error('Error testing Twilio connection:', error);
+    return {
+      success: false,
+      error: `Unexpected error: ${error.message || 'Unknown error'}`
+    };
+  }
 }
 
 /**

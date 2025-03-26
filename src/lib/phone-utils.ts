@@ -7,30 +7,35 @@
  * Removes spaces, dashes, and other non-numeric characters
  * Ensures 11-digit format starting with '07' (for UK)
  */
-export function formatUKMobileNumber(mobileNumber: string): string {
-  if (!mobileNumber) return '';
-
-  // Remove all non-numeric characters
-  const numericOnly = mobileNumber.replace(/[^0-9+]/g, '');
-
-  // Process different formats
-  // Handle international +44 format (e.g., +447123456789)
-  if (numericOnly.startsWith('+44') && numericOnly.length === 13) {
-    return '0' + numericOnly.substring(3); // Convert to 07XXXXXXXXX
+export function formatUKMobileNumber(phoneNumber: string): string | null {
+  if (!phoneNumber) return null;
+  
+  // Remove all non-digit characters except the plus sign
+  const sanitized = phoneNumber.replace(/[^\d+]/g, '');
+  
+  // Handle different UK mobile number formats
+  if (sanitized.length === 10 && sanitized.startsWith('07')) {
+    // Convert 07XXXXXXXXX to +447XXXXXXXXX
+    return '+44' + sanitized.substring(1);
+  } else if (sanitized.length === 11 && sanitized.startsWith('447')) {
+    // Convert 447XXXXXXXXX to +447XXXXXXXXX
+    return '+' + sanitized;
+  } else if (sanitized.length === 12 && sanitized.startsWith('4407')) {
+    // Convert 4407XXXXXXXXX to +447XXXXXXXXX (sometimes people include the 0)
+    return '+44' + sanitized.substring(3);
+  } else if (sanitized.length === 13 && sanitized.startsWith('00447')) {
+    // Convert 00447XXXXXXXXX to +447XXXXXXXXX
+    return '+' + sanitized.substring(2);
+  } else if (sanitized.startsWith('+44') && (sanitized.length === 13 || sanitized.length === 14)) {
+    // Already in international format, just return as is
+    return sanitized;
+  } else if (sanitized.startsWith('+') && sanitized.length >= 11 && sanitized.length <= 15) {
+    // Other international format, assume it's correct
+    return sanitized;
   }
-
-  // Handle international 44 format without + (e.g., 447123456789)
-  if (numericOnly.startsWith('44') && numericOnly.length === 12) {
-    return '0' + numericOnly.substring(2); // Convert to 07XXXXXXXXX
-  }
-
-  // Return as is if it already starts with 07 and has 11 digits
-  if (numericOnly.startsWith('07') && numericOnly.length === 11) {
-    return numericOnly;
-  }
-
-  // If none of the formats match, return original input
-  return mobileNumber;
+  
+  // Not a valid mobile number format
+  return null;
 }
 
 /**
