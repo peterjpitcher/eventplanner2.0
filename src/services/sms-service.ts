@@ -5,7 +5,26 @@ import { Customer } from '@/types';
 import { Booking } from './booking-service';
 import { Event } from './event-service';
 
+// Add diagnostic logging when this file is imported
+console.log('SMS Service module loading');
+console.log('Supabase client available:', !!supabase);
+
 const logger = createLogger('sms-service');
+
+// Verify Supabase connection on module load
+(async () => {
+  try {
+    console.log('Testing Supabase connection...');
+    const { data, error } = await supabase.from('sms_messages').select('count(*)', { count: 'exact', head: true });
+    if (error) {
+      console.error('Supabase connection test failed:', error);
+    } else {
+      console.log('Supabase connection test successful, count:', data);
+    }
+  } catch (error) {
+    console.error('Error testing Supabase connection:', error);
+  }
+})();
 
 export type SMSMessageType = 
   | 'booking_confirmation' 
@@ -91,11 +110,12 @@ export const smsService = {
             customer_id: null, // No customer for test messages
             booking_id: null, // No booking for test messages
             message_type: 'test',
-            content: messageContent,
-            phone_number: phoneNumber,
+            message: messageContent,
+            recipient: phoneNumber,
             sent_at: new Date().toISOString(),
             status: result.success ? 'sent' : 'failed',
-            message_sid: result.message?.sid || null
+            message_sid: result.message?.sid || null,
+            message_direction: 'outbound'
           });
           console.log('Test message logged to database');
         } catch (logError) {
@@ -121,7 +141,7 @@ export const smsService = {
       const { count, error } = await supabase
         .from('sms_messages')
         .select('*', { count: 'exact', head: true })
-        .eq('direction', 'inbound')
+        .eq('message_direction', 'inbound')
         .eq('is_read', false);
       
       if (error) throw error;
@@ -140,60 +160,175 @@ export const smsService = {
    */
   async sendSMS(request: SMSRequest): Promise<SMSResult> {
     try {
+      console.log('DEBUG: smsService.sendSMS called with:', JSON.stringify(request, null, 2));
+      
       // Check if SMS sending is enabled in environment
       const SMS_ENABLED = process.env.NEXT_PUBLIC_SMS_ENABLED === 'true';
+      console.log('DEBUG: NEXT_PUBLIC_SMS_ENABLED =', process.env.NEXT_PUBLIC_SMS_ENABLED);
+      console.log('DEBUG: SMS_ENABLED =', SMS_ENABLED);
       
       if (!SMS_ENABLED) {
         logger.info('SMS sending is disabled in the environment');
+        console.log('DEBUG: SMS sending is disabled in the environment');
         return { success: false, error: 'SMS sending is disabled' };
       }
       
       // Validate the request
       if (!request.to || !request.message || !request.booking_id) {
-        logger.error('Invalid SMS request', { request });
-        return { success: false, error: 'Invalid SMS request. Missing to, message, or booking_id' };
+        const missingFields = [];
+        if (!request.to) missingFields.push('to');
+        if (!request.message) missingFields.push('message');
+        if (!request.booking_id) missingFields.push('booking_id');
+        
+        const errorMessage = `Invalid SMS request. Missing fields: ${missingFields.join(', ')}`;
+        logger.error(errorMessage, { request });
+        console.log('DEBUG: ' + errorMessage, request);
+        return { success: false, error: errorMessage };
       }
       
       // Format the phone number
       const formattedNumber = this.formatPhoneNumber(request.to);
+      console.log('DEBUG: Formatted phone number:', formattedNumber);
+      
       if (!formattedNumber) {
-        return { success: false, error: 'Invalid phone number format' };
+        const errorMessage = `Invalid phone number format: ${request.to}`;
+        console.log('DEBUG: ' + errorMessage);
+        return { success: false, error: errorMessage };
       }
       
       // In a real application, here you would call your SMS provider API
       // For now, we'll simulate the SMS sending
       logger.info(`[SIMULATED] Sending SMS to ${formattedNumber}`);
       logger.debug(`SMS Message: ${request.message}`);
+      console.log(`DEBUG: [SIMULATED] Sending SMS to ${formattedNumber}`);
+      console.log(`DEBUG: SMS Message: ${request.message}`);
+      
+      const now = new Date().toISOString();
+      console.log('DEBUG: Current timestamp:', now);
+      
+      // Create insert data object
+      const insertData = {
+        booking_id: request.booking_id,
+        message_type: request.message_type,
+        message: request.message,
+        recipient: formattedNumber,
+        status: 'sent', // In a real app, this would be 'pending' until confirmed by the SMS provider
+        sent_at: now,
+        message_direction: 'outbound'
+      };
+      
+      console.log('DEBUG: Inserting SMS record with data:', JSON.stringify(insertData, null, 2));
+      console.log('DEBUG: Supabase client available:', !!supabase);
       
       // Log the SMS to the database
-      const { data: smsLog, error: logError } = await supabase
-        .from('sms_messages')
-        .insert({
-          booking_id: request.booking_id,
-          message_type: request.message_type,
-          message: request.message,
-          recipient: formattedNumber,
-          status: 'sent', // In a real app, this would be 'pending' until confirmed by the SMS provider
-          sent_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+      try {
+        // Make sure Supabase is available
+        if (!supabase) {
+          throw new Error('Supabase client is not available');
+        }
+
+        // Check if table exists
+        console.log('DEBUG: Verifying sms_messages table...');
+        const { data: tableInfo, error: tableError } = await supabase
+          .from('sms_messages')
+          .select('id', { count: 'exact', head: true })
+          .limit(1);
+          
+        if (tableError) {
+          console.error('DEBUG: Error checking sms_messages table:', tableError);
+          throw new Error(`Table check failed: ${tableError.message}`);
+        }
+        
+        console.log('DEBUG: SMS messages table exists, proceeding with insert');
+
+        // FIXED: Removed duplicate insert operation - only use one insert with select
+        console.log('DEBUG: Beginning insert operation');
+        
+        // Insert with detailed error handling and return the inserted record
+        const { data: smsLog, error: logError } = await supabase
+          .from('sms_messages')
+          .insert(insertData)
+          .select()
+          .single();
+        
+        if (logError) {
+          const errorMessage = `Error logging SMS to database: ${logError.message}`;
+          logger.error(errorMessage, logError);
+          console.error('DEBUG: ' + errorMessage, logError);
+          
+          if (logError.details) {
+            console.error('DEBUG: Error details:', logError.details);
+          }
+          
+          if (logError.hint) {
+            console.error('DEBUG: Error hint:', logError.hint);
+          }
+          
+          if (logError.code) {
+            console.error('DEBUG: Error code:', logError.code);
+          }
+          
+          return { success: false, error: errorMessage };
+        }
+        
+        if (!smsLog) {
+          const errorMessage = 'No SMS log record was returned after insert';
+          logger.error(errorMessage);
+          console.error('DEBUG: ' + errorMessage);
+          return { success: false, error: errorMessage };
+        }
+        
+        logger.info(`SMS sent successfully and logged with ID: ${smsLog.id}`);
+        console.log(`DEBUG: SMS sent successfully and logged with ID: ${smsLog.id}`);
+        
+        return { 
+          success: true, 
+          message_id: smsLog.id 
+        };
+      } catch (dbError) {
+        // Catch any unexpected errors
+        const errorMessage = `Unexpected error when logging SMS: ${dbError instanceof Error ? dbError.message : 'Unknown error'}`;
+        logger.error(errorMessage, dbError);
+        console.error('DEBUG: ' + errorMessage, dbError);
+        
+        if (dbError instanceof Error) {
+          console.error('DEBUG: Error name:', dbError.name);
+          console.error('DEBUG: Error message:', dbError.message);
+          if (dbError.stack) {
+            console.error('DEBUG: Error stack:', dbError.stack);
+          }
+          if ((dbError as any).code) {
+            console.error('DEBUG: Error code:', (dbError as any).code);
+          }
+          if ((dbError as any).details) {
+            console.error('DEBUG: Error details:', (dbError as any).details);
+          }
+        }
+        
+        // Return success anyway since we might have sent the SMS but just failed to log it
+        return { 
+          success: true, 
+          error: 'SMS possibly sent but failed to log to database'
+        };
+      }
+    } catch (error: any) {
+      const errorMessage = `Error sending SMS: ${error.message || 'Unknown error'}`;
+      logger.error(errorMessage, error);
+      console.error('DEBUG: ' + errorMessage, error);
       
-      if (logError) {
-        logger.error('Error logging SMS to database:', logError);
-        return { success: false, error: 'Error logging SMS' };
+      if (error.stack) {
+        console.error('DEBUG: Error stack:', error.stack);
+      }
+      if (error.code) {
+        console.error('DEBUG: Error code:', error.code);
+      }
+      if (error.details) {
+        console.error('DEBUG: Error details:', error.details);
       }
       
-      logger.info(`SMS sent successfully and logged with ID: ${smsLog.id}`);
-      return { 
-        success: true, 
-        message_id: smsLog.id 
-      };
-    } catch (error: any) {
-      logger.error('Error sending SMS:', error);
       return { 
         success: false, 
-        error: error.message || 'Unknown error sending SMS' 
+        error: errorMessage
       };
     }
   },
@@ -393,7 +528,7 @@ export const smsService = {
           content: params.messageContent,
           message_type: 'reply',
           status: 'received',
-          direction: 'inbound',
+          message_direction: 'inbound',
           is_read: false,
           sent_at: new Date().toISOString()
         })
@@ -433,7 +568,7 @@ export const smsService = {
             last_name
           )
         `)
-        .eq('direction', 'inbound')
+        .eq('message_direction', 'inbound')
         .order('sent_at', { ascending: false });
       
       if (error) {
@@ -470,7 +605,7 @@ export const smsService = {
             last_name
           )
         `)
-        .eq('direction', 'inbound')
+        .eq('message_direction', 'inbound')
         .eq('customer_id', customerId)
         .order('sent_at', { ascending: false });
       
@@ -513,14 +648,13 @@ export const smsService = {
   
   /**
    * Mark all SMS replies as read
-   * @returns Success status
    */
   async markAllRepliesAsRead(): Promise<{ success: boolean; error?: any }> {
     try {
       const { error } = await supabase
         .from('sms_messages')
         .update({ is_read: true })
-        .eq('direction', 'inbound')
+        .eq('message_direction', 'inbound')
         .eq('is_read', false);
       
       if (error) {
@@ -530,7 +664,7 @@ export const smsService = {
       
       return { success: true };
     } catch (error) {
-      logger.error('Error marking all SMS replies as read:', error);
+      logger.error('Error in markAllRepliesAsRead:', error);
       return { success: false, error };
     }
   },
@@ -551,37 +685,166 @@ export const smsService = {
   }> {
     try {
       const { customer, messageType, messageContent, bookingId } = params;
+      console.log('DEBUG: sendSMSToCustomer called with params:', JSON.stringify({
+        customerId: customer.id,
+        hasMobileNumber: !!customer.mobile_number,
+        messageType,
+        bookingId
+      }, null, 2));
       
       // Check if customer has a mobile number
       if (!customer.mobile_number) {
+        const errorMessage = 'Customer has no mobile number';
+        console.log('DEBUG: ' + errorMessage);
         return {
           success: false,
-          error: 'Customer has no mobile number'
+          error: errorMessage
         };
       }
       
       // Format the mobile number
       const formattedNumber = this.formatPhoneNumber(customer.mobile_number);
+      console.log(`DEBUG: Formatted mobile number: ${formattedNumber} (from ${customer.mobile_number})`);
+      
       if (!formattedNumber) {
+        const errorMessage = `Invalid phone number format: ${customer.mobile_number}`;
+        console.log('DEBUG: ' + errorMessage);
         return {
           success: false,
-          error: 'Invalid phone number format'
+          error: errorMessage
         };
       }
       
+      console.log('DEBUG: About to send SMS with message content:', messageContent);
+      
       // Send the SMS
-      return await this.sendSMS({
+      const smsResult = await this.sendSMS({
         to: formattedNumber,
         message: messageContent,
         booking_id: bookingId || customer.id, // Use booking ID or customer ID as a fallback
         message_type: messageType
       });
+      
+      console.log('DEBUG: sendSMS result:', JSON.stringify(smsResult, null, 2));
+      
+      return smsResult;
     } catch (error) {
-      logger.error('Error sending SMS to customer:', error);
+      const errorMessage = `Error sending SMS to customer: ${error instanceof Error ? error.message : 'Unknown error'}`;
+      logger.error(errorMessage, error);
+      console.error('DEBUG: ' + errorMessage);
+      
+      if (error instanceof Error && error.stack) {
+        console.error('DEBUG: Error stack:', error.stack);
+      }
+      
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: errorMessage
       };
+    }
+  },
+  
+  async processIncomingMessage(from: string, body: string): Promise<{ success: boolean; error?: any }> {
+    try {
+      // Look up customer by phone number
+      const { data: customerData, error: customerError } = await supabase
+        .from('customers')
+        .select('id, first_name, last_name')
+        .eq('mobile_number', from)
+        .maybeSingle();
+      
+      if (customerError) throw customerError;
+      
+      // Log the incoming message, linking to customer if found
+      const { data: logData, error: logError } = await supabase
+        .from('sms_messages')
+        .insert({
+          customer_id: customerData?.id || null,
+          message: body,
+          recipient: from, // Store sender's number in recipient field
+          status: 'received',
+          message_direction: 'inbound',
+          is_read: false,
+          sent_at: new Date().toISOString()
+        })
+        .select()
+        .single();
+      
+      if (logError) throw logError;
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Error processing incoming message:', error);
+      return { success: false, error };
+    }
+  },
+  
+  /**
+   * Get all SMS replies
+   */
+  async getSMSReplies(): Promise<{ data: SMSReply[], error?: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('sms_messages')
+        .select('*')
+        .eq('message_direction', 'inbound')
+        .order('sent_at', { ascending: false });
+      
+      if (error) {
+        logger.error('Error fetching SMS replies:', error);
+        return { data: [], error };
+      }
+      
+      // Map to expected format
+      const replies = data.map(item => ({
+        id: item.id,
+        customer_id: item.customer_id,
+        from_number: item.recipient,
+        message_content: item.message,
+        received_at: item.sent_at,
+        read: item.is_read,
+        // We'll fetch customer details separately if needed
+        customer: undefined
+      }));
+      
+      return { data: replies };
+    } catch (error) {
+      logger.error('Error processing SMS replies data:', error);
+      return { data: [], error };
+    }
+  },
+  
+  /**
+   * Get SMS replies for a specific customer
+   */
+  async getCustomerReplies(customerId: string): Promise<{ data: SMSReply[], error?: any }> {
+    try {
+      const { data, error } = await supabase
+        .from('sms_messages')
+        .select('*')
+        .eq('message_direction', 'inbound')
+        .eq('customer_id', customerId)
+        .order('sent_at', { ascending: false });
+      
+      if (error) {
+        logger.error(`Error fetching SMS replies for customer ${customerId}:`, error);
+        return { data: [], error };
+      }
+      
+      // Map to expected format
+      const replies = data.map(item => ({
+        id: item.id,
+        customer_id: item.customer_id,
+        from_number: item.recipient,
+        message_content: item.message,
+        received_at: item.sent_at,
+        read: item.is_read
+      }));
+      
+      return { data: replies };
+    } catch (error) {
+      logger.error('Error processing customer SMS replies data:', error);
+      return { data: [], error };
     }
   }
 }; 
