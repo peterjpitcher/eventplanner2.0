@@ -1,0 +1,101 @@
+name: Test Twilio Studio Integration
+
+on:
+  workflow_dispatch:
+    inputs:
+      test_phone_number:
+        description: 'Phone number to send test SMS to (E.164 format)'
+        required: true
+        default: '+447990587315'
+      customer_name:
+        description: 'Test customer name'
+        required: true
+        default: 'Test Customer'
+      event_name:
+        description: 'Test event name'
+        required: true
+        default: 'Quiz Night'
+      event_date:
+        description: 'Test event date (YYYY-MM-DD)'
+        required: true
+        default: '2024-04-02'
+      event_time:
+        description: 'Test event time (HH:mm)'
+        required: true
+        default: '19:00'
+      seats:
+        description: 'Number of seats'
+        required: true
+        default: '2'
+
+jobs:
+  test-studio-flow:
+    runs-on: ubuntu-latest
+    
+    env:
+      TWILIO_FLOW_SID: ${{ secrets.TWILIO_FLOW_SID }}
+      TWILIO_ACCOUNT_SID: ${{ secrets.TWILIO_ACCOUNT_SID }}
+      TWILIO_AUTH_TOKEN: ${{ secrets.TWILIO_AUTH_TOKEN }}
+      TEST_PHONE_NUMBER: ${{ github.event.inputs.test_phone_number }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create test script
+        run: |
+          cat > test-studio.js << 'EOL'
+          const { studioService } = require('./src/lib/twilio-studio/studio-service');
+
+          async function runTest() {
+            const testData = {
+              phoneNumber: process.env.TEST_PHONE_NUMBER,
+              customerName: '${{ github.event.inputs.customer_name }}',
+              eventName: '${{ github.event.inputs.event_name }}',
+              eventDate: new Date('${{ github.event.inputs.event_date }}T${{ github.event.inputs.event_time }}:00'),
+              seats: parseInt('${{ github.event.inputs.seats }}')
+            };
+
+            console.log('Testing with data:', {
+              ...testData,
+              phoneNumber: testData.phoneNumber.replace(/\d{4}$/, '****')
+            });
+
+            try {
+              const result = await studioService.sendBookingConfirmation(
+                testData.phoneNumber,
+                testData.customerName,
+                testData.eventName,
+                testData.eventDate,
+                testData.seats
+              );
+
+              if (result.success) {
+                console.log('Successfully triggered Studio flow:', {
+                  execution_sid: result.execution_sid
+                });
+                process.exit(0);
+              } else {
+                console.error('Failed to trigger Studio flow:', result.error);
+                process.exit(1);
+              }
+            } catch (error) {
+              console.error('Error running test:', error);
+              process.exit(1);
+            }
+          }
+
+          runTest();
+          EOL
+
+      - name: Run test
+        run: node test-studio.js 
